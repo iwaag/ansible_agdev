@@ -1,0 +1,11 @@
+---
+- name: Suspend Linux hosts now
+  hosts: ubuntu_knode:ubuntu_cuda
+  gather_facts: false
+  become: false
+
+  tasks:
+    - name: Suspend the host immediately
+      ansible.builtin.command: sudo -n /usr/bin/systemctl suspend
+      changed_when: true
+

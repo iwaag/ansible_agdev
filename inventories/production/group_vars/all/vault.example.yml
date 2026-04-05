@@ -1,0 +1,2 @@
+vault_default_user: your-login-user
+vault_ansible_become_password: your-sudo-password

@@ -1,0 +1,37 @@
+all:
+  children:
+    ubuntu_knode:
+      hosts:
+        node1:
+          ansible_user: "{{ default_user }}"
+          local_ip: 192.168.1.10
+          tailscale_ip: 100.64.0.10
+          mac_address: "00:11:22:33:44:55"
+          network_interface: enp3s0
+
+    ubuntu_cuda:
+      hosts:
+        gpu1:
+          ansible_user: "{{ default_user }}"
+          local_ip: 192.168.1.20
+          tailscale_ip: 100.64.0.20
+          mac_address: "00:11:22:33:44:66"
+          network_interface: enp4s0
+
+    mac_llm:
+      hosts:
+        macstudio1:
+          ansible_user: "{{ default_user }}"
+          local_ip: 192.168.1.30
+          tailscale_ip: 100.64.0.30
+          mac_address: "00:11:22:33:44:77"
+          network_interface: en0
+
+    mac_infra:
+      hosts:
+        macmini1:
+          ansible_user: "{{ default_user }}"
+          local_ip: 192.168.1.40
+          tailscale_ip: 100.64.0.40
+          mac_address: "00:11:22:33:44:88"
+          network_interface: en0

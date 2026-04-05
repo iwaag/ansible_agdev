@@ -1,0 +1,29 @@
+---
+- name: Allow the default user to suspend without a sudo password
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    suspend_sudoers_path: /etc/sudoers.d/80-ansible-suspend
+    suspend_sudo_commands:
+      - /usr/bin/systemctl suspend
+      - /bin/systemctl suspend
+
+  tasks:
+    - name: Ensure default_user is defined
+      ansible.builtin.assert:
+        that:
+          - default_user is defined
+          - default_user | length > 0
+        fail_msg: "default_user must be defined, for example from Ansible Vault."
+
+    - name: Install sudoers rule for suspend
+      ansible.builtin.template:
+        src: ../templates/suspend-nopasswd.sudoers.j2
+        dest: "{{ suspend_sudoers_path }}"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+

@@ -1,0 +1,12 @@
+inventories/*
+!inventories/hosts.example.yml
+!inventories/production/
+inventories/production/*
+!inventories/production/group_vars/
+inventories/production/group_vars/*
+!inventories/production/group_vars/all/
+inventories/production/group_vars/all/*
+!inventories/production/group_vars/all/main.yml
+!inventories/production/group_vars/all/vault.example.yml
+.vault_pass.txt
+.hints/

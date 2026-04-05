@@ -1,0 +1,44 @@
+---
+- name: Enable Wake-on-LAN on selected hosts
+  hosts: ubuntu_knode:ubuntu_cuda
+  become: true
+  gather_facts: false
+
+  vars:
+    wol_service_name: ansible-wake-on-lan.service
+    wol_service_path: "/etc/systemd/system/{{ wol_service_name }}"
+
+  tasks:
+    - name: Ensure network_interface is defined
+      ansible.builtin.assert:
+        that:
+          - network_interface is defined
+          - network_interface | length > 0
+        fail_msg: "network_interface must be defined for each host."
+
+    - name: Install ethtool
+      ansible.builtin.package:
+        name: ethtool
+        state: present
+
+    - name: Enable Wake-on-LAN immediately
+      ansible.builtin.command: "ethtool -s {{ network_interface }} wol g"
+      changed_when: true
+
+    - name: Install Wake-on-LAN systemd unit
+      ansible.builtin.template:
+        src: ../templates/wake-on-lan.service.j2
+        dest: "{{ wol_service_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start Wake-on-LAN systemd unit
+      ansible.builtin.systemd:
+        name: "{{ wol_service_name }}"
+        enabled: true
+        state: started

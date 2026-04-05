@@ -1,0 +1,50 @@
+---
+- name: Send Wake-on-LAN packets from the control node
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars:
+    wol_broadcast_ip: 255.255.255.255
+    wol_port: 9
+    wake_target: all
+    wake_hosts: "{{ query('inventory_hostnames', wake_target) }}"
+
+  tasks:
+    - name: Ensure the wake target resolves to inventory hosts
+      ansible.builtin.assert:
+        that:
+          - wake_hosts | length > 0
+        fail_msg: "wake_target did not match any inventory hosts."
+
+    - name: Ensure each target host has a MAC address
+      ansible.builtin.assert:
+        that:
+          - hostvars[item].mac_address is defined
+          - hostvars[item].mac_address | length > 0
+        fail_msg: "mac_address must be defined for host {{ item }}."
+      loop: "{{ wake_hosts }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Send magic packet to each target host
+      ansible.builtin.shell: |
+        python3 - <<'PY'
+        import socket
+
+        mac = "{{ hostvars[item].mac_address }}".replace(":", "").replace("-", "")
+        if len(mac) != 12:
+            raise ValueError("Invalid mac_address for {{ item }}: {{ hostvars[item].mac_address }}")
+
+        payload = bytes.fromhex("FF" * 6 + mac * 16)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.sendto(payload, ("{{ wol_broadcast_ip }}", {{ wol_port }}))
+        sock.close()
+        PY
+      args:
+        executable: /bin/bash
+      loop: "{{ wake_hosts }}"
+      loop_control:
+        label: "{{ item }}"
+      changed_when: true
