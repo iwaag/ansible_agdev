@@ -11,3 +11,4 @@ inventories/production/group_vars/all/*
 .vault_pass.txt
 .hints/
 api/.venv/
+__pycache__/
