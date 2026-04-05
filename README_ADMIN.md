@@ -55,6 +55,8 @@ ansible-vault encrypt inventories/production/group_vars/all/vault.yml
 
 The plain variables in `inventories/production/group_vars/all/main.yml` expose:
 
+- `connection_path`
+- `ansible_host`
 - `default_user`
 - `ansible_become_password`
 
@@ -85,6 +87,17 @@ Each host entry can include:
 - `tailscale_ip`
 - `mac_address`
 - `network_interface`
+
+By default, `ansible_host` is derived from `connection_path`:
+
+- `connection_path: local` uses `local_ip`
+- `connection_path: tailscale` uses `tailscale_ip`
+
+You can switch the route for a run like this:
+
+```bash
+ansible-playbook playbooks/configure_suspend_sudo.yml --limit <host_or_group> -e connection_path=tailscale
+```
 
 Wake-on-LAN related playbooks depend on:
 
