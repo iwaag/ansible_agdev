@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Final
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[2]
@@ -100,31 +100,41 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _payload_or_default(payload: PlaybookRequest | None) -> PlaybookRequest:
+    return payload if payload is not None else PlaybookRequest()
+
+
 @app.post("/webhook/configure/suspend/linux", dependencies=[Depends(require_token)])
-async def configure_suspend_linux(payload: PlaybookRequest) -> dict[str, object]:
-    return await _run_playbook("configure_suspend_linux", payload)
+async def configure_suspend_linux(
+    payload: PlaybookRequest | None = Body(default=None),
+) -> dict[str, object]:
+    return await _run_playbook("configure_suspend_linux", _payload_or_default(payload))
 
 
 @app.post("/webhook/suspend/linux", dependencies=[Depends(require_token)])
-async def suspend_linux(payload: PlaybookRequest) -> dict[str, object]:
-    return await _run_playbook("suspend_linux", payload)
+async def suspend_linux(payload: PlaybookRequest | None = Body(default=None)) -> dict[str, object]:
+    return await _run_playbook("suspend_linux", _payload_or_default(payload))
 
 
 @app.post("/webhook/configure/suspend/macos", dependencies=[Depends(require_token)])
-async def configure_suspend_macos(payload: PlaybookRequest) -> dict[str, object]:
-    return await _run_playbook("configure_suspend_macos", payload)
+async def configure_suspend_macos(
+    payload: PlaybookRequest | None = Body(default=None),
+) -> dict[str, object]:
+    return await _run_playbook("configure_suspend_macos", _payload_or_default(payload))
 
 
 @app.post("/webhook/sleep/macos", dependencies=[Depends(require_token)])
-async def sleep_macos(payload: PlaybookRequest) -> dict[str, object]:
-    return await _run_playbook("sleep_macos", payload)
+async def sleep_macos(payload: PlaybookRequest | None = Body(default=None)) -> dict[str, object]:
+    return await _run_playbook("sleep_macos", _payload_or_default(payload))
 
 
 @app.post("/webhook/configure/wol/linux", dependencies=[Depends(require_token)])
-async def enable_wol_linux(payload: PlaybookRequest) -> dict[str, object]:
-    return await _run_playbook("enable_wol_linux", payload)
+async def enable_wol_linux(
+    payload: PlaybookRequest | None = Body(default=None),
+) -> dict[str, object]:
+    return await _run_playbook("enable_wol_linux", _payload_or_default(payload))
 
 
 @app.post("/webhook/wake", dependencies=[Depends(require_token)])
-async def wake(payload: PlaybookRequest) -> dict[str, object]:
-    return await _run_playbook("wake", payload)
+async def wake(payload: PlaybookRequest | None = Body(default=None)) -> dict[str, object]:
+    return await _run_playbook("wake", _payload_or_default(payload))

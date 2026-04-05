@@ -42,3 +42,4 @@ Example body:
 ```
 
 `connection_path` is optional and only accepts `local` or `tailscale`.
+The request body itself is also optional, so sending `{}` or no JSON body is valid.
