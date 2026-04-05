@@ -1,0 +1,12 @@
+[project]
+name = "ansible-webhooks"
+version = "0.1.0"
+description = "Minimal FastAPI webhook server for this Ansible project"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn>=0.35.0",
+]
+
+[tool.uv]
+package = false

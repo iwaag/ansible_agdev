@@ -10,3 +10,4 @@ inventories/production/group_vars/all/*
 !inventories/production/group_vars/all/vault.example.yml
 .vault_pass.txt
 .hints/
+api/.venv/

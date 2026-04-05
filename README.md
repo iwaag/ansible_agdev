@@ -1,6 +1,7 @@
 # Ansible Project
 
 Operational usage lives here. Initial SSH, inventory, and Vault setup is documented in `README_ADMIN.md`.
+The minimal webhook server lives in `api/`. See `api/README.md`.
 
 ## Playbooks
 
