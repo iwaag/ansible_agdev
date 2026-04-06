@@ -4,10 +4,27 @@
     name: rfkill
     state: present
 
-- name: Mask sleep-related systemd targets
+- name: Ensure systemd-logind drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/logind.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Disable idle-triggered sleep in systemd-logind
+  ansible.builtin.template:
+    src: logind-idle-action.conf.j2
+    dest: /etc/systemd/logind.conf.d/80-ansible-idle-action.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-logind
+
+- name: Ensure sleep-related systemd targets are not masked
   ansible.builtin.systemd:
     name: "{{ item }}"
-    masked: true
+    masked: false
   loop:
     - sleep.target
     - suspend.target
