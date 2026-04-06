@@ -39,3 +39,11 @@ all:
           tailscale_ip: 100.64.0.40
           mac_address: "00:11:22:33:44:88"
           network_interface: en0
+
+    prometheus_server:
+      hosts:
+        prometheus1:
+          ansible_user: "{{ default_user }}"
+          is_laptop: false
+          local_ip: 192.168.1.50
+          tailscale_ip: 100.64.0.50

@@ -1,0 +1,16 @@
+---
+prometheus_version: "2.51.1"
+prometheus_go_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+prometheus_go_arch: "{{ prometheus_go_arch_map.get(ansible_architecture, '') }}"
+prometheus_system_user: "{{ default_user }}"
+prometheus_config_dir: /etc/prometheus
+prometheus_data_dir: /var/lib/prometheus
+prometheus_tmp_dir: /tmp
+prometheus_listen_address: "0.0.0.0:9090"
+prometheus_retention_time: "15d"
+prometheus_static_configs:
+  - job_name: prometheus
+    targets:
+      - localhost:9090

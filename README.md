@@ -41,6 +41,12 @@ Apply the Linux worker baseline setup:
 ansible-playbook playbooks/linux_initial_setup.yml --limit <host_or_group>
 ```
 
+Install Prometheus from the upstream release archive:
+
+```bash
+ansible-playbook playbooks/setup_prometheus.yml --limit <host_or_group>
+```
+
 Send a Wake-on-LAN magic packet from the control node:
 
 ```bash
@@ -54,5 +60,6 @@ ansible-playbook playbooks/wake_hosts.yml --limit <host_or_group>
 - `sleep_macos_hosts.yml` expects the macOS sudoers rule from `configure_suspend_mac.yml` to already be installed.
 - `enable_wake_on_lan.yml` is intended for the `ubuntu_knode` and `ubuntu_cuda` groups.
 - `linux_initial_setup.yml` is intended for the `ubuntu_knode` and `ubuntu_cuda` groups and uses `is_laptop: true` on hosts that should receive the laptop-specific power profile.
+- `setup_prometheus.yml` installs Prometheus from GitHub releases, runs it as `default_user`, and ignores the LXC provisioning step.
 - `wake_hosts.yml` uses each selected host's `mac_address` and sends to `255.255.255.255:9`.
 - The default inventory is configured in `ansible.cfg`.
