@@ -1,0 +1,28 @@
+---
+- name: Ensure default_user is defined
+  ansible.builtin.assert:
+    that:
+      - default_user is defined
+      - default_user | length > 0
+    fail_msg: "default_user must be defined, for example from Ansible Vault."
+
+- name: Ensure ansible architecture is supported for Prometheus
+  ansible.builtin.assert:
+    that:
+      - prometheus_go_arch | length > 0
+    fail_msg: "Unsupported architecture for Prometheus: {{ ansible_architecture }}"
+
+- name: Set Prometheus archive paths
+  ansible.builtin.set_fact:
+    prometheus_archive_name: "prometheus-{{ prometheus_version }}.linux-{{ prometheus_go_arch }}"
+    prometheus_archive_path: "{{ prometheus_tmp_dir }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_go_arch }}.tar.gz"
+    prometheus_extract_path: "{{ prometheus_tmp_dir }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_go_arch }}"
+
+- name: Look up Prometheus runtime group
+  ansible.builtin.command: "id -gn {{ prometheus_system_user }}"
+  register: prometheus_runtime_group
+  changed_when: false
+
+- name: Set Prometheus runtime group
+  ansible.builtin.set_fact:
+    prometheus_system_group: "{{ prometheus_runtime_group.stdout }}"

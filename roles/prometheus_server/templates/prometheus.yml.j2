@@ -2,11 +2,59 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-{% for scrape_config in prometheus_static_configs %}
-  - job_name: {{ scrape_config.job_name | to_json }}
+{% for scrape_job in prometheus_scrape_jobs %}
+  - job_name: {{ scrape_job.job_name | to_json }}
+{% if scrape_job.metrics_path is defined %}
+    metrics_path: {{ scrape_job.metrics_path | to_json }}
+{% endif %}
+{% if scrape_job.scheme is defined %}
+    scheme: {{ scrape_job.scheme | to_json }}
+{% endif %}
     static_configs:
+{% for static_config in scrape_job.static_configs %}
       - targets:
-{% for target in scrape_config.targets %}
+{% for target in static_config.targets %}
           - {{ target | to_json }}
 {% endfor %}
+{% if static_config.labels is defined %}
+        labels:
+{% for key, value in static_config.labels.items() %}
+          {{ key }}: {{ value | to_json }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% for inventory_job in prometheus_inventory_jobs %}
+{% set inventory_targets = [] %}
+{% for group_name in inventory_job.groups | default([]) %}
+{% for host_name in groups.get(group_name, []) %}
+{% set target_host = hostvars[host_name].get(inventory_job.hostvar | default('ansible_host'), host_name) %}
+{% if target_host %}
+{% set target = target_host ~ ':' ~ (inventory_job.port | string) %}
+{% if target not in inventory_targets %}
+{% set _ = inventory_targets.append(target) %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% if inventory_targets %}
+  - job_name: {{ inventory_job.job_name | to_json }}
+{% if inventory_job.metrics_path is defined %}
+    metrics_path: {{ inventory_job.metrics_path | to_json }}
+{% endif %}
+{% if inventory_job.scheme is defined %}
+    scheme: {{ inventory_job.scheme | to_json }}
+{% endif %}
+    static_configs:
+      - targets:
+{% for target in inventory_targets %}
+          - {{ target | to_json }}
+{% endfor %}
+{% if inventory_job.labels is defined %}
+        labels:
+{% for key, value in inventory_job.labels.items() %}
+          {{ key }}: {{ value | to_json }}
+{% endfor %}
+{% endif %}
+{% endif %}
 {% endfor %}

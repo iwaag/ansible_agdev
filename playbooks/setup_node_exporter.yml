@@ -1,0 +1,24 @@
+---
+- name: Install node exporter on selected hosts
+  hosts: prometheus_node_exporter_targets
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: prometheus_node_exporter
+
+- name: Refresh Prometheus scrape configuration from inventory
+  hosts: prometheus_server
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Prepare Prometheus runtime variables
+      ansible.builtin.import_role:
+        name: prometheus_server
+        tasks_from: prereqs.yml
+
+    - name: Refresh Prometheus configuration only
+      ansible.builtin.import_role:
+        name: prometheus_server
+        tasks_from: config.yml

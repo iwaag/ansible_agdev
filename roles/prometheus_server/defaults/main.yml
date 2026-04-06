@@ -10,7 +10,14 @@ prometheus_data_dir: /var/lib/prometheus
 prometheus_tmp_dir: /tmp
 prometheus_listen_address: "0.0.0.0:9090"
 prometheus_retention_time: "15d"
-prometheus_static_configs:
+prometheus_scrape_jobs:
   - job_name: prometheus
-    targets:
-      - localhost:9090
+    static_configs:
+      - targets:
+          - localhost:9090
+prometheus_inventory_jobs:
+  - job_name: node_exporter
+    groups:
+      - prometheus_node_exporter_targets
+    port: 9100
+    hostvar: ansible_host

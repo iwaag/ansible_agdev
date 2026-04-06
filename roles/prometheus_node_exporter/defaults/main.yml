@@ -1,0 +1,3 @@
+---
+prometheus_node_exporter_package_name: prometheus-node-exporter
+prometheus_node_exporter_service_name: prometheus-node-exporter.service
