@@ -2,6 +2,7 @@
 - name: Install laptop power management packages
   ansible.builtin.package:
     name:
+      - brightnessctl
       - tlp
       - tlp-rdw
     state: present
@@ -40,6 +41,21 @@
 - name: Enable and start mem sleep default service
   ansible.builtin.systemd:
     name: ansible-mem-sleep-default.service
+    daemon_reload: true
+    enabled: true
+    state: started
+
+- name: Install backlight dimming systemd unit
+  ansible.builtin.template:
+    src: set-brightness.service.j2
+    dest: /etc/systemd/system/ansible-set-brightness.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start backlight dimming service
+  ansible.builtin.systemd:
+    name: ansible-set-brightness.service
     daemon_reload: true
     enabled: true
     state: started
