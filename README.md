@@ -35,6 +35,12 @@ Enable Wake-on-LAN on Linux targets:
 ansible-playbook playbooks/enable_wake_on_lan.yml --limit <host_or_group>
 ```
 
+Apply the Linux worker baseline setup:
+
+```bash
+ansible-playbook playbooks/linux_initial_setup.yml --limit <host_or_group>
+```
+
 Send a Wake-on-LAN magic packet from the control node:
 
 ```bash
@@ -47,5 +53,6 @@ ansible-playbook playbooks/wake_hosts.yml --limit <host_or_group>
 - `configure_suspend_mac.yml` is intended for the `mac_llm` and `mac_infra` groups and allows `/usr/bin/pmset sleepnow`.
 - `sleep_macos_hosts.yml` expects the macOS sudoers rule from `configure_suspend_mac.yml` to already be installed.
 - `enable_wake_on_lan.yml` is intended for the `ubuntu_knode` and `ubuntu_cuda` groups.
+- `linux_initial_setup.yml` is intended for the `ubuntu_knode` and `ubuntu_cuda` groups and uses `is_laptop: true` on hosts that should receive the laptop-specific power profile.
 - `wake_hosts.yml` uses each selected host's `mac_address` and sends to `255.255.255.255:9`.
 - The default inventory is configured in `ansible.cfg`.

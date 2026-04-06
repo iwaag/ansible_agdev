@@ -1,0 +1,30 @@
+---
+- name: Install rfkill
+  ansible.builtin.package:
+    name: rfkill
+    state: present
+
+- name: Mask sleep-related systemd targets
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    masked: true
+  loop:
+    - sleep.target
+    - suspend.target
+    - hibernate.target
+    - hybrid-sleep.target
+
+- name: Install rfkill enforcement systemd unit
+  ansible.builtin.template:
+    src: rfkill-block.service.j2
+    dest: /etc/systemd/system/ansible-rfkill-block.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start rfkill enforcement service
+  ansible.builtin.systemd:
+    name: ansible-rfkill-block.service
+    daemon_reload: true
+    enabled: true
+    state: started

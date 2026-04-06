@@ -4,6 +4,7 @@ all:
       hosts:
         node1:
           ansible_user: "{{ default_user }}"
+          is_laptop: false
           local_ip: 192.168.1.10
           tailscale_ip: 100.64.0.10
           mac_address: "00:11:22:33:44:55"
@@ -13,6 +14,7 @@ all:
       hosts:
         gpu1:
           ansible_user: "{{ default_user }}"
+          is_laptop: false
           local_ip: 192.168.1.20
           tailscale_ip: 100.64.0.20
           mac_address: "00:11:22:33:44:66"
@@ -22,6 +24,7 @@ all:
       hosts:
         macstudio1:
           ansible_user: "{{ default_user }}"
+          is_laptop: false
           local_ip: 192.168.1.30
           tailscale_ip: 100.64.0.30
           mac_address: "00:11:22:33:44:77"
@@ -31,6 +34,7 @@ all:
       hosts:
         macmini1:
           ansible_user: "{{ default_user }}"
+          is_laptop: false
           local_ip: 192.168.1.40
           tailscale_ip: 100.64.0.40
           mac_address: "00:11:22:33:44:88"

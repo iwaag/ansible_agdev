@@ -1,0 +1,11 @@
+[Unit]
+Description=Block Wi-Fi and Bluetooth adapters
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'rfkill block wifi && rfkill block bluetooth'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

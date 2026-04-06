@@ -1,0 +1,12 @@
+[Unit]
+Description=Set mem_sleep default to s2idle when supported
+After=multi-user.target
+ConditionPathExists=/sys/power/mem_sleep
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'grep -q "s2idle" /sys/power/mem_sleep && echo s2idle > /sys/power/mem_sleep || true'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

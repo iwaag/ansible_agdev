@@ -1,0 +1,45 @@
+---
+- name: Install laptop power management packages
+  ansible.builtin.package:
+    name:
+      - tlp
+      - tlp-rdw
+    state: present
+
+- name: Ensure tlp service is enabled and started
+  ansible.builtin.systemd:
+    name: tlp.service
+    enabled: true
+    state: started
+
+- name: Ensure systemd-logind drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/logind.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure lid switch handling
+  ansible.builtin.template:
+    src: logind-lid-switch.conf.j2
+    dest: /etc/systemd/logind.conf.d/80-ansible-lid-switch.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-logind
+
+- name: Install mem sleep default systemd unit
+  ansible.builtin.template:
+    src: mem-sleep-default.service.j2
+    dest: /etc/systemd/system/ansible-mem-sleep-default.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start mem sleep default service
+  ansible.builtin.systemd:
+    name: ansible-mem-sleep-default.service
+    daemon_reload: true
+    enabled: true
+    state: started

@@ -1,0 +1,11 @@
+---
+- name: Apply Linux worker baseline settings
+  hosts: ubuntu_knode:ubuntu_cuda
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: common_linux_baseline
+    - role: linux_worker_tuning
+    - role: laptop_power_profile
+      when: is_laptop | default(false) | bool
