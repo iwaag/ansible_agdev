@@ -53,6 +53,12 @@ Install node exporter on selected hosts and refresh Prometheus targets:
 ansible-playbook playbooks/setup_node_exporter.yml --limit <host_or_group_or_group_union>
 ```
 
+Install Grafana and provision the Prometheus data source:
+
+```bash
+ansible-playbook playbooks/setup_grafana.yml --limit <host_or_group>
+```
+
 Send a Wake-on-LAN magic packet from the control node:
 
 ```bash
@@ -68,5 +74,6 @@ ansible-playbook playbooks/wake_hosts.yml --limit <host_or_group>
 - `linux_initial_setup.yml` is intended for the `ubuntu_knode` and `ubuntu_cuda` groups and uses `is_laptop: true` on hosts that should receive the laptop-specific power profile.
 - `setup_prometheus.yml` installs Prometheus from GitHub releases, runs it as `default_user`, and ignores the LXC provisioning step.
 - `setup_node_exporter.yml` installs the Debian/Ubuntu `prometheus-node-exporter` package on `prometheus_node_exporter_targets` and refreshes Prometheus scrape targets from inventory groups.
+- `setup_grafana.yml` installs Grafana from the official apt repository on `grafana_server` and provisions a Prometheus data source that points at the first host in `prometheus_server`.
 - `wake_hosts.yml` uses each selected host's `mac_address` and sends to `255.255.255.255:9`.
 - The default inventory is configured in `ansible.cfg`.

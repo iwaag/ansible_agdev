@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: {{ grafana_datasource_name | to_json }}
+    uid: {{ grafana_datasource_uid | to_json }}
+    type: prometheus
+    access: {{ grafana_datasource_access | to_json }}
+    url: {{ grafana_prometheus_url | replace(' ', '') | to_json }}
+    isDefault: {{ grafana_datasource_is_default | bool | lower }}
+    editable: true

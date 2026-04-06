@@ -1,0 +1,8 @@
+---
+- name: Install and configure Grafana
+  hosts: grafana_server
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: grafana_server

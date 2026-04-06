@@ -1,0 +1,76 @@
+---
+- name: Ensure Prometheus target exists when datasource provisioning is enabled
+  ansible.builtin.assert:
+    that:
+      - groups.get(grafana_prometheus_target_group, []) | length > 0
+    fail_msg: >-
+      grafana_prometheus_target_group '{{ grafana_prometheus_target_group }}'
+      must contain at least one host when datasource provisioning is enabled.
+  when: grafana_datasource_provisioning_enabled | bool
+
+- name: Install Grafana apt dependencies
+  ansible.builtin.package:
+    name: "{{ grafana_apt_dependencies }}"
+    state: present
+
+- name: Ensure Grafana apt keyring directory exists
+  ansible.builtin.file:
+    path: "{{ grafana_apt_keyring_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Grafana apt signing key
+  ansible.builtin.get_url:
+    url: "{{ grafana_apt_key_url }}"
+    dest: "{{ grafana_apt_keyring_dir }}/grafana.key"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Dearmor Grafana apt signing key
+  ansible.builtin.command:
+    cmd: >-
+      gpg --dearmor
+      --yes
+      --output {{ grafana_apt_key_path }}
+      {{ grafana_apt_keyring_dir }}/grafana.key
+  changed_when: true
+
+- name: Add Grafana apt repository
+  ansible.builtin.apt_repository:
+    repo: "{{ grafana_apt_repo }}"
+    filename: grafana
+    state: present
+    update_cache: true
+
+- name: Install Grafana package
+  ansible.builtin.package:
+    name: "{{ grafana_package_name }}"
+    state: present
+
+- name: Ensure Grafana datasource provisioning directory exists
+  ansible.builtin.file:
+    path: /etc/grafana/provisioning/datasources
+    state: directory
+    owner: root
+    group: grafana
+    mode: "0750"
+  when: grafana_datasource_provisioning_enabled | bool
+
+- name: Provision Prometheus datasource for Grafana
+  ansible.builtin.template:
+    src: prometheus-datasource.yml.j2
+    dest: /etc/grafana/provisioning/datasources/ansible-prometheus.yml
+    owner: root
+    group: grafana
+    mode: "0640"
+  when: grafana_datasource_provisioning_enabled | bool
+  notify: Restart Grafana
+
+- name: Ensure Grafana service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ grafana_service_name }}"
+    enabled: true
+    state: started

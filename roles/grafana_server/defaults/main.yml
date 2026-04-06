@@ -1,0 +1,30 @@
+---
+grafana_apt_dependencies:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - software-properties-common
+grafana_apt_keyring_dir: /etc/apt/keyrings
+grafana_apt_key_path: /etc/apt/keyrings/grafana.gpg
+grafana_apt_key_url: https://apt.grafana.com/gpg.key
+grafana_apt_repo: "deb [signed-by={{ grafana_apt_key_path }}] https://apt.grafana.com stable main"
+grafana_package_name: grafana
+grafana_service_name: grafana-server.service
+grafana_datasource_provisioning_enabled: true
+grafana_datasource_name: Prometheus
+grafana_datasource_uid: prometheus
+grafana_datasource_access: proxy
+grafana_datasource_is_default: true
+grafana_prometheus_scheme: http
+grafana_prometheus_port: 9090
+grafana_prometheus_hostvar: ansible_host
+grafana_prometheus_target_group: prometheus_server
+grafana_prometheus_url: >-
+  {{ grafana_prometheus_scheme }}://
+  {{
+    hostvars[groups[grafana_prometheus_target_group][0]].get(
+      grafana_prometheus_hostvar,
+      groups[grafana_prometheus_target_group][0]
+    )
+  }}:{{ grafana_prometheus_port }}
