@@ -5,7 +5,7 @@ Wants=display-manager.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'brightnessctl -q set 5% || true'
+ExecStart=/bin/sh -c 'for _ in $(seq 1 15); do brightnessctl -q set 5% || true; sleep 2; done'
 RemainAfterExit=yes
 
 [Install]
