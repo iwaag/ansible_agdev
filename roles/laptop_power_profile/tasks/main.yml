@@ -19,10 +19,16 @@
     replace: '\1\2 consoleblank=60"'
   notify: Update grub
 
+- name: Check runtime console blanking parameter
+  ansible.builtin.stat:
+    path: /sys/module/kernel/parameters/consoleblank
+  register: runtime_consoleblank
+
 - name: Apply runtime console blanking timeout
   ansible.builtin.shell: echo 60 > /sys/module/kernel/parameters/consoleblank
   args:
     executable: /bin/bash
+  when: runtime_consoleblank.stat.writeable | default(false)
   changed_when: false
 
 - name: Ensure systemd-logind drop-in directory exists
