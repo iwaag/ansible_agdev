@@ -5,6 +5,8 @@
   gather_facts: false
 
   vars:
+    ansible_connection: local
+    ansible_host: 127.0.0.1
     home_assistant_power_output_path: "{{ playbook_dir | dirname }}/generated/home_assistant/ansible_power_switches.yaml"
     home_assistant_webhook_base_url: "http://127.0.0.1:8000"
     home_assistant_webhook_token: "CHANGE_ME"
