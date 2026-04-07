@@ -12,6 +12,19 @@
     enabled: true
     state: started
 
+- name: Configure GRUB console blanking timeout
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=")(?!.*\bconsoleblank=60\b)([^"]*)"'
+    replace: '\1\2 consoleblank=60"'
+  notify: Update grub
+
+- name: Apply runtime console blanking timeout
+  ansible.builtin.shell: echo 60 > /sys/module/kernel/parameters/consoleblank
+  args:
+    executable: /bin/bash
+  changed_when: false
+
 - name: Ensure systemd-logind drop-in directory exists
   ansible.builtin.file:
     path: /etc/systemd/logind.conf.d

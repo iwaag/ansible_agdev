@@ -3,3 +3,6 @@
   ansible.builtin.systemd:
     name: systemd-logind
     state: restarted
+
+- name: Update grub
+  ansible.builtin.command: update-grub
