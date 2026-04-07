@@ -12,21 +12,6 @@
     enabled: true
     state: started
 
-- name: Configure GRUB console blanking timeout
-  ansible.builtin.replace:
-    path: /etc/default/grub
-    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=")(?!.*\bconsoleblank=60\b)([^"]*)"'
-    replace: '\1\2 consoleblank=60"'
-  notify: Update grub
-
-- name: Apply runtime console blanking timeout
-  ansible.builtin.shell: echo 60 > /sys/module/kernel/parameters/consoleblank
-  args:
-    executable: /bin/bash
-  register: runtime_consoleblank_apply
-  changed_when: false
-  failed_when: false
-
 - name: Ensure systemd-logind drop-in directory exists
   ansible.builtin.file:
     path: /etc/systemd/logind.conf.d
@@ -59,20 +44,22 @@
     enabled: true
     state: started
 
-- name: Install console blanking systemd unit
+- name: Ensure getty override directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/getty@tty1.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install getty console blanking override
   ansible.builtin.template:
-    src: setterm-blank.service.j2
-    dest: /etc/systemd/system/ansible-setterm-blank.service
+    src: getty-setterm-blank.conf.j2
+    dest: /etc/systemd/system/getty@tty1.service.d/10-ansible-setterm-blank.conf
     owner: root
     group: root
     mode: "0644"
-
-- name: Enable and start console blanking service
-  ansible.builtin.systemd:
-    name: ansible-setterm-blank.service
-    daemon_reload: true
-    enabled: true
-    state: started
+  notify: Reload and restart getty tty1
 
 - name: Lookup ansible user account
   ansible.builtin.getent:

@@ -15,12 +15,10 @@ rfkill list
 grep -E '^IdleAction=' /etc/systemd/logind.conf.d/80-ansible-idle-action.conf
 systemctl is-enabled tlp.service
 systemctl status tlp.service --no-pager
-grep -E '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub
-cat /sys/module/kernel/parameters/consoleblank
 grep -E '^(HandleLidSwitch|HandleLidSwitchDocked)=' /etc/systemd/logind.conf.d/80-ansible-lid-switch.conf
 cat /sys/power/mem_sleep
 systemctl status ansible-mem-sleep-default.service --no-pager
-systemctl status ansible-setterm-blank.service --no-pager
+systemctl cat getty@tty1.service
 grep -n 'ANSIBLE SETTERM BLANK' ~/.bashrc
 TERM=linux setterm --blank < /dev/tty1
 apt-config dump | grep -E 'APT::Periodic::(Update-Package-Lists|Unattended-Upgrade)'
@@ -33,12 +31,10 @@ Checks:
 - `rfkill list` should show `Wireless LAN` and `Bluetooth` as `Soft blocked: yes`.
 - `/etc/systemd/logind.conf.d/80-ansible-idle-action.conf` should contain `IdleAction=ignore`.
 - `tlp.service` should be `enabled` and `active`.
-- `/etc/default/grub` should contain `consoleblank=60` in `GRUB_CMDLINE_LINUX_DEFAULT`.
-- `/sys/module/kernel/parameters/consoleblank` should report `60`.
 - `/etc/systemd/logind.conf.d/80-ansible-lid-switch.conf` should contain `HandleLidSwitch=ignore` and `HandleLidSwitchDocked=ignore`.
 - `cat /sys/power/mem_sleep` should show `[s2idle]` on systems that support `s2idle`.
 - `ansible-mem-sleep-default.service` should not be in a failed state. On systems without `s2idle` support, only verify the `cat /sys/power/mem_sleep` output.
-- `ansible-setterm-blank.service` should not be in a failed state.
+- `systemctl cat getty@tty1.service` should show the `10-ansible-setterm-blank.conf` drop-in.
 - `~/.bashrc` should contain the `ANSIBLE SETTERM BLANK` block.
 - `TERM=linux setterm --blank < /dev/tty1` should report `1`.
 - `apt-config dump` should show periodic update and unattended upgrade enabled.

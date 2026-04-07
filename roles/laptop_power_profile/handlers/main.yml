@@ -4,5 +4,8 @@
     name: systemd-logind
     state: restarted
 
-- name: Update grub
-  ansible.builtin.command: update-grub
+- name: Reload and restart getty tty1
+  ansible.builtin.systemd:
+    name: getty@tty1.service
+    daemon_reload: true
+    state: restarted
