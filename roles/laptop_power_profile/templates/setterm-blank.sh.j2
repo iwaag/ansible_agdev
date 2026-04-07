@@ -1,0 +1,4 @@
+# Apply console blanking only for interactive Linux virtual console logins.
+if [ -t 0 ] && [ "${TERM:-}" = "linux" ]; then
+  /usr/bin/setterm --blank 1 >/dev/null 2>&1 || true
+fi
