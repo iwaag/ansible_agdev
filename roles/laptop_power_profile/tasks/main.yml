@@ -60,20 +60,3 @@
     group: root
     mode: "0644"
   notify: Reload and restart getty tty1
-
-- name: Lookup ansible user account
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ ansible_user }}"
-
-- name: Configure console blanking in ansible user's bashrc
-  ansible.builtin.blockinfile:
-    path: "{{ getent_passwd[ansible_user][4] }}/.bashrc"
-    marker: "# {mark} ANSIBLE SETTERM BLANK"
-    create: true
-    owner: "{{ ansible_user }}"
-    mode: "0644"
-    block: |
-      if [ -t 0 ] && [ "${TERM:-}" = "linux" ]; then
-        /usr/bin/setterm --blank 1 >/dev/null 2>&1 || true
-      fi
