@@ -77,7 +77,7 @@
 - name: Deploy Home Assistant power switches to Home Assistant OS
   hosts: haos_server
   gather_facts: false
-  become: false
+  become: true
 
   vars:
     home_assistant_power_output_path: "{{ playbook_dir | dirname }}/generated/home_assistant/ansible_power_switches.yaml"
