@@ -1,6 +1,7 @@
 [Unit]
 Description=Set laptop backlight brightness to 5 percent
-After=multi-user.target
+After=display-manager.service graphical.target systemd-user-sessions.service
+Wants=display-manager.service
 
 [Service]
 Type=oneshot
@@ -8,4 +9,4 @@ ExecStart=/bin/sh -c 'brightnessctl -q set 5% || true'
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target

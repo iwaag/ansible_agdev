@@ -81,6 +81,24 @@ ansible-playbook playbooks/deploy_home_assistant_power_switches.yml \
   -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
 ```
 
+## Home Assistant
+
+To load the deployed package from `/config/packages/ansible_power_switches.yaml`, enable packages in Home Assistant's `configuration.yaml`:
+
+```yaml
+homeassistant:
+  packages: !include_dir_named packages
+```
+
+If `homeassistant:` already exists, add only the `packages:` line under it.
+
+After deploying or updating the package:
+
+1. In Developer Tools, run the `command_line.reload` action to reload `command_line` entities.
+2. If this is the first time you enabled packages or the first time Home Assistant sees this YAML, restart Home Assistant once.
+
+The generated file defines `command_line` switches, so the entities should appear after the reload or restart.
+
 ## Notes
 
 - `suspend_hosts.yml` expects the Linux sudoers rule from `configure_suspend_sudo.yml` to already be installed.
