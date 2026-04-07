@@ -2,10 +2,14 @@
 - name: Install laptop power management packages
   ansible.builtin.package:
     name:
-      - brightnessctl
       - tlp
       - tlp-rdw
     state: present
+
+- name: Remove brightnessctl package
+  ansible.builtin.package:
+    name: brightnessctl
+    state: absent
 
 - name: Ensure tlp service is enabled and started
   ansible.builtin.systemd:
@@ -45,17 +49,29 @@
     enabled: true
     state: started
 
-- name: Install backlight dimming systemd unit
+- name: Stop and disable legacy backlight dimming service
+  ansible.builtin.systemd:
+    name: ansible-set-brightness.service
+    enabled: false
+    state: stopped
+  failed_when: false
+
+- name: Remove legacy backlight dimming systemd unit
+  ansible.builtin.file:
+    path: /etc/systemd/system/ansible-set-brightness.service
+    state: absent
+
+- name: Install console blanking systemd unit
   ansible.builtin.template:
-    src: set-brightness.service.j2
-    dest: /etc/systemd/system/ansible-set-brightness.service
+    src: setterm-blank.service.j2
+    dest: /etc/systemd/system/ansible-setterm-blank.service
     owner: root
     group: root
     mode: "0644"
 
-- name: Enable and start backlight dimming service
+- name: Enable and start console blanking service
   ansible.builtin.systemd:
-    name: ansible-set-brightness.service
+    name: ansible-setterm-blank.service
     daemon_reload: true
     enabled: true
     state: started

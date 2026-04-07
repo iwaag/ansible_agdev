@@ -1,0 +1,12 @@
+[Unit]
+Description=Configure console blanking timeout to 1 minute
+After=getty@tty1.service multi-user.target
+Wants=getty@tty1.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'setterm --blank 1 > /dev/tty1 || true'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
