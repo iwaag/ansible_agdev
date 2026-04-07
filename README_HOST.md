@@ -19,7 +19,7 @@ grep -E '^(HandleLidSwitch|HandleLidSwitchDocked)=' /etc/systemd/logind.conf.d/8
 cat /sys/power/mem_sleep
 systemctl status ansible-mem-sleep-default.service --no-pager
 systemctl status ansible-setterm-blank.service --no-pager
-setterm --blank
+TERM=linux setterm --blank < /dev/tty1
 apt-config dump | grep -E 'APT::Periodic::(Update-Package-Lists|Unattended-Upgrade)'
 unattended-upgrade --dry-run --debug
 needrestart -b
@@ -34,7 +34,7 @@ Checks:
 - `cat /sys/power/mem_sleep` should show `[s2idle]` on systems that support `s2idle`.
 - `ansible-mem-sleep-default.service` should not be in a failed state. On systems without `s2idle` support, only verify the `cat /sys/power/mem_sleep` output.
 - `ansible-setterm-blank.service` should not be in a failed state.
-- `setterm --blank` should report `1`.
+- `TERM=linux setterm --blank < /dev/tty1` should report `1`.
 - `apt-config dump` should show periodic update and unattended upgrade enabled.
 - `unattended-upgrade --dry-run --debug` should complete without fatal errors.
 - `needrestart -b` should confirm that services are not being restarted automatically.

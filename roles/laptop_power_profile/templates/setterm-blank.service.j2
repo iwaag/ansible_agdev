@@ -5,7 +5,12 @@ Wants=getty@tty1.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'setterm --blank 1 > /dev/tty1 || true'
+Environment=TERM=linux
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+ExecStart=/usr/bin/setterm --term linux --blank 1
 RemainAfterExit=yes
 
 [Install]
