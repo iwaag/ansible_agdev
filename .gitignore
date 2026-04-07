@@ -12,3 +12,4 @@ inventories/production/group_vars/all/*
 .hints/
 api/.venv/
 __pycache__/
+generated/

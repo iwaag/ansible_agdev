@@ -56,6 +56,14 @@ all:
           local_ip: 192.168.1.60
           tailscale_ip: 100.64.0.60
 
+    haos_server:
+      hosts:
+        homeassistant1:
+          ansible_user: "{{ default_user }}"
+          is_laptop: false
+          local_ip: 192.168.1.70
+          tailscale_ip: 100.64.0.70
+
     prometheus_node_exporter_targets:
       hosts:
         node1:

@@ -65,6 +65,22 @@ Send a Wake-on-LAN magic packet from the control node:
 ansible-playbook playbooks/wake_hosts.yml --limit <host_or_group>
 ```
 
+Generate Home Assistant `command_line` power switches from inventory:
+
+```bash
+ansible-playbook playbooks/generate_home_assistant_power_switches.yml \
+  -e home_assistant_webhook_base_url=http://YOUR_API_HOST:8000 \
+  -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
+```
+
+Generate and deploy the Home Assistant package to `haos_server`:
+
+```bash
+ansible-playbook playbooks/deploy_home_assistant_power_switches.yml \
+  -e home_assistant_webhook_base_url=http://YOUR_API_HOST:8000 \
+  -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
+```
+
 ## Notes
 
 - `suspend_hosts.yml` expects the Linux sudoers rule from `configure_suspend_sudo.yml` to already be installed.
@@ -76,4 +92,6 @@ ansible-playbook playbooks/wake_hosts.yml --limit <host_or_group>
 - `setup_node_exporter.yml` installs the Debian/Ubuntu `prometheus-node-exporter` package on `prometheus_node_exporter_targets` and refreshes Prometheus scrape targets from inventory groups.
 - `setup_grafana.yml` installs Grafana from the official apt repository on `grafana_server` and provisions a Prometheus data source that points at the first host in `prometheus_server`.
 - `wake_hosts.yml` uses each selected host's `mac_address` and sends to `255.255.255.255:9`.
+- `generate_home_assistant_power_switches.yml` renders `generated/home_assistant/ansible_power_switches.yaml` for hosts in `ubuntu_knode`, `ubuntu_cuda`, `mac_llm`, and `mac_infra`. State is derived from `local_ip` ping, power on uses `POST /webhook/wake`, Linux power off uses `POST /webhook/suspend/linux`, and macOS power off uses `POST /webhook/sleep/macos`.
+- `deploy_home_assistant_power_switches.yml` renders the same package locally and copies it to `/config/packages/ansible_power_switches.yaml` on hosts in `haos_server`.
 - The default inventory is configured in `ansible.cfg`.

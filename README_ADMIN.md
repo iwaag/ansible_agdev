@@ -88,6 +88,8 @@ Each host entry can include:
 - `mac_address`
 - `network_interface`
 
+The example inventory also includes a `haos_server` group for the Home Assistant host that receives generated package files.
+
 By default, `ansible_host` is derived from `connection_path`:
 
 - `connection_path: local` uses `local_ip`

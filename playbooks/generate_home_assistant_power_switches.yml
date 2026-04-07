@@ -1,0 +1,73 @@
+---
+- name: Generate Home Assistant power switches from inventory
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    home_assistant_power_output_path: "{{ playbook_dir | dirname }}/generated/home_assistant/ansible_power_switches.yaml"
+    home_assistant_webhook_base_url: "http://127.0.0.1:8000"
+    home_assistant_webhook_token: "CHANGE_ME"
+    home_assistant_ping_count: 1
+    home_assistant_ping_timeout_seconds: 1
+    home_assistant_linux_power_groups:
+      - ubuntu_knode
+      - ubuntu_cuda
+    home_assistant_macos_power_groups:
+      - mac_llm
+      - mac_infra
+
+  tasks:
+    - name: Build the list of power-managed hosts
+      ansible.builtin.set_fact:
+        home_assistant_power_hosts: >-
+          {%- set ns = namespace(hosts=[]) -%}
+          {%- for group_name in home_assistant_linux_power_groups + home_assistant_macos_power_groups -%}
+          {%-   set ns.hosts = ns.hosts + groups.get(group_name, []) -%}
+          {%- endfor -%}
+          {{ ns.hosts | unique }}
+
+    - name: Assert the webhook base URL looks valid
+      ansible.builtin.assert:
+        that:
+          - home_assistant_webhook_base_url is match("^https?://")
+        fail_msg: "home_assistant_webhook_base_url must start with http:// or https://"
+
+    - name: Assert at least one power-managed host was found
+      ansible.builtin.assert:
+        that:
+          - home_assistant_power_hosts | length > 0
+        fail_msg: >-
+          No hosts were found in the Linux or macOS power-control groups:
+          {{ (home_assistant_linux_power_groups + home_assistant_macos_power_groups) | join(', ') }}
+
+    - name: Assert supported hosts define local_ip and mac_address
+      ansible.builtin.assert:
+        that:
+          - hostvars[item].local_ip is defined
+          - hostvars[item].local_ip | length > 0
+          - hostvars[item].mac_address is defined
+          - hostvars[item].mac_address | length > 0
+        fail_msg: >-
+          Host {{ item }} must define local_ip and mac_address to generate a Home Assistant power switch.
+      loop: "{{ home_assistant_power_hosts }}"
+
+    - name: Assert supported hosts belong to exactly one power control family
+      ansible.builtin.assert:
+        that:
+          - ((hostvars[item].group_names | intersect(home_assistant_linux_power_groups)) | length) + ((hostvars[item].group_names | intersect(home_assistant_macos_power_groups)) | length) == 1
+        fail_msg: >-
+          Host {{ item }} must belong to exactly one Linux or macOS power-control group.
+      loop: "{{ home_assistant_power_hosts }}"
+
+    - name: Ensure the generated Home Assistant directory exists
+      ansible.builtin.file:
+        path: "{{ home_assistant_power_output_path | dirname }}"
+        state: directory
+        mode: "0755"
+
+    - name: Render Home Assistant command_line switches
+      ansible.builtin.template:
+        src: ../templates/home-assistant-power-switches.yaml.j2
+        dest: "{{ home_assistant_power_output_path }}"
+        mode: "0640"
