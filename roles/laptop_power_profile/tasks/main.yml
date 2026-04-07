@@ -6,6 +6,15 @@
       - tlp-rdw
     state: present
 
+- name: Check current systemd default target
+  ansible.builtin.command: systemctl get-default
+  register: laptop_power_profile_default_target
+  changed_when: false
+
+- name: Set systemd default target to multi-user.target
+  ansible.builtin.command: systemctl set-default multi-user.target
+  when: laptop_power_profile_default_target.stdout != "multi-user.target"
+
 - name: Ensure tlp service is enabled and started
   ansible.builtin.systemd:
     name: tlp.service
