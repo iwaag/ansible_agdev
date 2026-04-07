@@ -18,6 +18,7 @@ systemctl status tlp.service --no-pager
 grep -E '^(HandleLidSwitch|HandleLidSwitchDocked)=' /etc/systemd/logind.conf.d/80-ansible-lid-switch.conf
 cat /sys/power/mem_sleep
 systemctl status ansible-mem-sleep-default.service --no-pager
+systemctl status ansible-setterm-blank.service --no-pager
 ls -l /etc/profile.d/ansible-setterm-blank.sh
 TERM=linux setterm --blank < /dev/tty1
 apt-config dump | grep -E 'APT::Periodic::(Update-Package-Lists|Unattended-Upgrade)'
@@ -33,6 +34,7 @@ Checks:
 - `/etc/systemd/logind.conf.d/80-ansible-lid-switch.conf` should contain `HandleLidSwitch=ignore` and `HandleLidSwitchDocked=ignore`.
 - `cat /sys/power/mem_sleep` should show `[s2idle]` on systems that support `s2idle`.
 - `ansible-mem-sleep-default.service` should not be in a failed state. On systems without `s2idle` support, only verify the `cat /sys/power/mem_sleep` output.
+- `ansible-setterm-blank.service` should not be in a failed state.
 - `/etc/profile.d/ansible-setterm-blank.sh` should exist.
 - `TERM=linux setterm --blank < /dev/tty1` should report `1`.
 - `apt-config dump` should show periodic update and unattended upgrade enabled.
