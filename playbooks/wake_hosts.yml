@@ -1,36 +1,17 @@
 ---
-- name: Send Wake-on-LAN packets from the control node
-  hosts: all
+- name: Schedule macOS hosts to wake shortly
+  hosts: mac_llm:mac_infra
   gather_facts: false
-  connection: local
+  become: false
 
   vars:
-    wol_broadcast_ip: 255.255.255.255
-    wol_port: 9
+    macos_wake_delay_seconds: 2
 
   tasks:
-    - name: Ensure mac_address is defined
-      ansible.builtin.assert:
-        that:
-          - mac_address is defined
-          - mac_address | length > 0
-        fail_msg: "mac_address must be defined for each host."
-
-    - name: Send magic packet
-      ansible.builtin.shell: |
-        python3 - <<'PY'
-        import socket
-
-        mac = "{{ mac_address }}".replace(":", "").replace("-", "")
-        if len(mac) != 12:
-            raise ValueError("Invalid mac_address: {{ mac_address }}")
-
-        payload = bytes.fromhex("FF" * 6 + mac * 16)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.sendto(payload, ("{{ wol_broadcast_ip }}", {{ wol_port }}))
-        sock.close()
-        PY
+    - name: Schedule the host to wake
+      ansible.builtin.shell: >
+        sudo -n /usr/bin/pmset schedule wake
+        "$(/bin/date -v+{{ macos_wake_delay_seconds }}S '+%m/%d/%y %H:%M:%S')"
       args:
         executable: /bin/bash
       changed_when: true

@@ -29,6 +29,15 @@
           {%- endfor -%}
           {{ ns.hosts | unique }}
 
+    - name: Build the list of Linux power-managed hosts
+      ansible.builtin.set_fact:
+        home_assistant_linux_power_hosts: >-
+          {%- set ns = namespace(hosts=[]) -%}
+          {%- for group_name in home_assistant_linux_power_groups -%}
+          {%-   set ns.hosts = ns.hosts + groups.get(group_name, []) -%}
+          {%- endfor -%}
+          {{ ns.hosts | unique }}
+
     - name: Assert the webhook base URL looks valid
       ansible.builtin.assert:
         that:
@@ -43,16 +52,23 @@
           No hosts were found in the Linux or macOS power-control groups:
           {{ (home_assistant_linux_power_groups + home_assistant_macos_power_groups) | join(', ') }}
 
-    - name: Assert supported hosts define local_ip and mac_address
+    - name: Assert supported hosts define local_ip
       ansible.builtin.assert:
         that:
           - hostvars[item].local_ip is defined
           - hostvars[item].local_ip | length > 0
+        fail_msg: >-
+          Host {{ item }} must define local_ip to generate a Home Assistant power switch.
+      loop: "{{ home_assistant_power_hosts }}"
+
+    - name: Assert Linux power-managed hosts define mac_address
+      ansible.builtin.assert:
+        that:
           - hostvars[item].mac_address is defined
           - hostvars[item].mac_address | length > 0
         fail_msg: >-
-          Host {{ item }} must define local_ip and mac_address to generate a Home Assistant power switch.
-      loop: "{{ home_assistant_power_hosts }}"
+          Linux host {{ item }} must define mac_address to generate a Home Assistant power switch.
+      loop: "{{ home_assistant_linux_power_hosts }}"
 
     - name: Assert supported hosts belong to exactly one power control family
       ansible.builtin.assert:

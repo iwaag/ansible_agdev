@@ -20,7 +20,8 @@ PLAYBOOKS: Final[dict[str, str]] = {
     "configure_suspend_macos": "playbooks/configure_suspend_mac.yml",
     "sleep_macos": "playbooks/sleep_macos_hosts.yml",
     "enable_wol_linux": "playbooks/enable_wake_on_lan.yml",
-    "wake": "playbooks/wake_hosts.yml",
+    "wake_linux": "playbooks/wake_linux_hosts.yml",
+    "wake_macos": "playbooks/wake_hosts.yml",
 }
 
 RUN_LOCK = asyncio.Lock()
@@ -137,4 +138,14 @@ async def enable_wol_linux(
 
 @app.post("/webhook/wake", dependencies=[Depends(require_token)])
 async def wake(payload: PlaybookRequest | None = Body(default=None)) -> dict[str, object]:
-    return await _run_playbook("wake", _payload_or_default(payload))
+    return await _run_playbook("wake_linux", _payload_or_default(payload))
+
+
+@app.post("/webhook/wake/linux", dependencies=[Depends(require_token)])
+async def wake_linux(payload: PlaybookRequest | None = Body(default=None)) -> dict[str, object]:
+    return await _run_playbook("wake_linux", _payload_or_default(payload))
+
+
+@app.post("/webhook/wake/macos", dependencies=[Depends(require_token)])
+async def wake_macos(payload: PlaybookRequest | None = Body(default=None)) -> dict[str, object]:
+    return await _run_playbook("wake_macos", _payload_or_default(payload))

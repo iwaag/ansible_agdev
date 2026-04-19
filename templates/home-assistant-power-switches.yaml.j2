@@ -10,8 +10,10 @@ command_line:
 {% for host_name in home_assistant_power_hosts | sort %}
 {% set group_names = hostvars[host_name].group_names %}
 {% if (group_names | intersect(linux_groups) | length) > 0 %}
+{% set power_on_endpoint = '/webhook/wake/linux' %}
 {% set power_off_endpoint = '/webhook/suspend/linux' %}
 {% else %}
+{% set power_on_endpoint = '/webhook/wake/macos' %}
 {% set power_off_endpoint = '/webhook/sleep/macos' %}
 {% endif %}
 {% set slug = host_name | lower | regex_replace('[^a-z0-9_]+', '_') %}
@@ -25,7 +27,7 @@ command_line:
         -H {{ ('X-Webhook-Token: ' ~ home_assistant_webhook_token) | quote }}
         -H 'Content-Type: application/json'
         --data {{ ({'limit': host_name, 'connection_path': 'local'} | to_json) | quote }}
-        {{ (base_url ~ '/webhook/wake') | quote }}
+        {{ (base_url ~ power_on_endpoint) | quote }}
       command_off: >-
         curl --silent --show-error --fail
         -X POST

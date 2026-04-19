@@ -8,6 +8,7 @@
     suspend_sudoers_path: /etc/sudoers.d/80-ansible-suspend
     suspend_sudo_commands:
       - /usr/bin/pmset sleepnow
+      - /usr/bin/pmset schedule wake *
 
   tasks:
     - name: Ensure default_user is defined

@@ -1,0 +1,36 @@
+---
+- name: Send Wake-on-LAN packets from the control node
+  hosts: ubuntu_knode:ubuntu_cuda
+  gather_facts: false
+  connection: local
+
+  vars:
+    wol_broadcast_ip: 255.255.255.255
+    wol_port: 9
+
+  tasks:
+    - name: Ensure mac_address is defined
+      ansible.builtin.assert:
+        that:
+          - mac_address is defined
+          - mac_address | length > 0
+        fail_msg: "mac_address must be defined for each Linux host."
+
+    - name: Send magic packet
+      ansible.builtin.shell: |
+        python3 - <<'PY'
+        import socket
+
+        mac = "{{ mac_address }}".replace(":", "").replace("-", "")
+        if len(mac) != 12:
+            raise ValueError("Invalid mac_address: {{ mac_address }}")
+
+        payload = bytes.fromhex("FF" * 6 + mac * 16)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.sendto(payload, ("{{ wol_broadcast_ip }}", {{ wol_port }}))
+        sock.close()
+        PY
+      args:
+        executable: /bin/bash
+      changed_when: true

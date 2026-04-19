@@ -27,6 +27,8 @@ The server runs playbooks from the repository root and expects:
 - `POST /webhook/sleep/macos`
 - `POST /webhook/configure/wol/linux`
 - `POST /webhook/wake`
+- `POST /webhook/wake/linux`
+- `POST /webhook/wake/macos`
 
 All POST endpoints require:
 
