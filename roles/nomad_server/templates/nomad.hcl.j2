@@ -1,0 +1,33 @@
+data_dir = "{{ nomad_data_dir }}"
+bind_addr = "{{ nomad_bind_addr }}"
+
+region = "{{ nomad_region }}"
+datacenter = "{{ nomad_datacenter }}"
+log_level = "{{ nomad_log_level }}"
+
+server {
+  enabled = {{ nomad_server_enabled | bool | lower }}
+  bootstrap_expect = {{ nomad_bootstrap_expect }}
+{% if nomad_server_retry_join | length > 0 %}
+
+  server_join {
+    retry_join = [
+{% for target in nomad_server_retry_join %}
+      "{{ target }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+    ]
+    retry_interval = "{{ nomad_server_retry_interval }}"
+    retry_max = {{ nomad_server_retry_max }}
+  }
+{% endif %}
+}
+
+advertise {
+  http = "{{ nomad_advertise_http }}"
+  rpc = "{{ nomad_advertise_rpc }}"
+  serf = "{{ nomad_advertise_serf }}"
+}
+
+ui {
+  enabled = {{ nomad_ui_enabled | bool | lower }}
+}

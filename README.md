@@ -59,6 +59,12 @@ Install Grafana and provision the Prometheus data source:
 ansible-playbook playbooks/setup_grafana.yml --limit <host_or_group>
 ```
 
+Install and configure a Nomad server on Ubuntu:
+
+```bash
+ansible-playbook playbooks/setup_nomad_server.yml --limit <host_or_group>
+```
+
 Schedule a macOS host to wake shortly:
 
 ```bash
@@ -115,6 +121,7 @@ The generated file defines `command_line` switches, so the entities should appea
 - `setup_prometheus.yml` installs Prometheus from GitHub releases, runs it as `default_user`, and ignores the LXC provisioning step.
 - `setup_node_exporter.yml` installs the Debian/Ubuntu `prometheus-node-exporter` package on `prometheus_node_exporter_targets` and refreshes Prometheus scrape targets from inventory groups.
 - `setup_grafana.yml` installs Grafana from the official apt repository on `grafana_server` and provisions a Prometheus data source that points at the first host in `prometheus_server`.
+- `setup_nomad_server.yml` installs Nomad from the official HashiCorp apt repository on `nomad_server`, configures a single-node server, and keeps `advertise` and `server_join.retry_join` configurable for later multi-node expansion.
 - `wake_hosts.yml` is intended for the `mac_llm` and `mac_infra` groups and schedules `pmset` wake two seconds ahead on the selected host.
 - `wake_linux_hosts.yml` uses each selected Linux host's `mac_address` and sends to `255.255.255.255:9`.
 - `generate_home_assistant_power_switches.yml` renders `generated/home_assistant/ansible_power_switches.yaml` for hosts in `ubuntu_knode`, `ubuntu_cuda`, `mac_llm`, and `mac_infra`. State is derived from `local_ip` ping, Linux power on uses `POST /webhook/wake/linux`, macOS power on uses `POST /webhook/wake/macos`, Linux power off uses `POST /webhook/suspend/linux`, and macOS power off uses `POST /webhook/sleep/macos`.

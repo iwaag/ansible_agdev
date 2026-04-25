@@ -1,0 +1,80 @@
+---
+- name: Assert Nomad server role is used on Debian-family hosts
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: "nomad_server role currently supports Debian/Ubuntu hosts only."
+
+- name: Install Nomad apt dependencies
+  ansible.builtin.package:
+    name: "{{ nomad_apt_dependencies }}"
+    state: present
+
+- name: Ensure HashiCorp apt keyring directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_apt_keyring_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download HashiCorp apt signing key
+  ansible.builtin.get_url:
+    url: "{{ nomad_apt_key_url }}"
+    dest: "{{ nomad_apt_keyring_dir }}/hashicorp.key"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Dearmor HashiCorp apt signing key
+  ansible.builtin.command:
+    cmd: >-
+      gpg --dearmor
+      --yes
+      --output {{ nomad_apt_key_path }}
+      {{ nomad_apt_keyring_dir }}/hashicorp.key
+  changed_when: true
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "{{ nomad_apt_repo }}"
+    filename: hashicorp
+    state: present
+    update_cache: true
+
+- name: Install Nomad package
+  ansible.builtin.package:
+    name: "{{ nomad_package_name }}"
+    state: present
+
+- name: Ensure Nomad configuration directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_config_dir }}"
+    state: directory
+    owner: "{{ nomad_config_owner }}"
+    group: "{{ nomad_config_group }}"
+    mode: "{{ nomad_config_dir_mode }}"
+
+- name: Ensure Nomad data directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}"
+    state: directory
+    owner: "{{ nomad_data_owner }}"
+    group: "{{ nomad_data_group }}"
+    mode: "{{ nomad_data_dir_mode }}"
+
+- name: Install Nomad server configuration
+  ansible.builtin.template:
+    src: nomad.hcl.j2
+    dest: "{{ nomad_config_file }}"
+    owner: "{{ nomad_config_owner }}"
+    group: "{{ nomad_config_group }}"
+    mode: "{{ nomad_config_file_mode }}"
+    validate: "/usr/bin/nomad agent -validate -config=%s"
+  notify: Restart Nomad
+
+- name: Ensure Nomad service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ nomad_service_name }}"
+    enabled: true
+    state: started

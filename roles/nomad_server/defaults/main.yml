@@ -1,0 +1,48 @@
+---
+nomad_apt_dependencies:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - software-properties-common
+
+nomad_apt_keyring_dir: /etc/apt/keyrings
+nomad_apt_key_path: /etc/apt/keyrings/hashicorp-archive-keyring.gpg
+nomad_apt_key_url: https://apt.releases.hashicorp.com/gpg
+nomad_apt_repo: >-
+  deb [signed-by={{ nomad_apt_key_path }}]
+  https://apt.releases.hashicorp.com
+  {{ ansible_distribution_release | lower }} main
+
+nomad_package_name: nomad
+nomad_service_name: nomad.service
+
+nomad_config_dir: /etc/nomad.d
+nomad_config_file: "{{ nomad_config_dir }}/nomad.hcl"
+nomad_config_owner: root
+nomad_config_group: nomad
+nomad_config_dir_mode: "0750"
+nomad_config_file_mode: "0640"
+
+nomad_data_dir: /opt/nomad/data
+nomad_data_owner: nomad
+nomad_data_group: nomad
+nomad_data_dir_mode: "0750"
+
+nomad_region: global
+nomad_datacenter: dc1
+nomad_log_level: INFO
+
+nomad_bind_addr: "0.0.0.0"
+nomad_advertise_address: "{{ local_ip | default(ansible_host) }}"
+nomad_advertise_http: "{{ nomad_advertise_address }}"
+nomad_advertise_rpc: "{{ nomad_advertise_address }}"
+nomad_advertise_serf: "{{ nomad_advertise_address }}"
+
+nomad_ui_enabled: true
+
+nomad_server_enabled: true
+nomad_bootstrap_expect: 1
+nomad_server_retry_join: []
+nomad_server_retry_interval: 30s
+nomad_server_retry_max: 0
