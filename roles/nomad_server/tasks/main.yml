@@ -70,7 +70,7 @@
     owner: "{{ nomad_config_owner }}"
     group: "{{ nomad_config_group }}"
     mode: "{{ nomad_config_file_mode }}"
-    validate: "/usr/bin/nomad agent -validate -config=%s"
+    validate: "/usr/bin/nomad config validate %s"
   notify: Restart Nomad
 
 - name: Ensure Nomad service is enabled and started
