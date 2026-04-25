@@ -79,6 +79,14 @@ all:
           local_ip: 192.168.1.60
           tailscale_ip: 100.64.0.60
 
+    nomad_server:
+      hosts:
+        node1:
+
+    nomad_client:
+      hosts:
+        gpu1:
+
     haos_server:
       hosts:
         homeassistant1:
