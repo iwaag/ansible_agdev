@@ -1,6 +1,6 @@
 ---
 - name: Apply Linux worker baseline settings
-  hosts: ubuntu_knode:ubuntu_cuda
+  hosts: "linux:&power_managed"
   become: true
   gather_facts: true
 

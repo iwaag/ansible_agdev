@@ -1,6 +1,6 @@
 ---
 - name: Schedule macOS hosts to wake shortly
-  hosts: mac_llm:mac_infra
+  hosts: "macos:&power_managed"
   gather_facts: false
   become: false
 

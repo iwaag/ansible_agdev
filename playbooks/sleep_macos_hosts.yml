@@ -1,6 +1,6 @@
 ---
 - name: Put macOS hosts to sleep now
-  hosts: mac_llm:mac_infra
+  hosts: "macos:&power_managed"
   gather_facts: false
   become: false
 
@@ -8,4 +8,3 @@
     - name: Put the host to sleep immediately
       ansible.builtin.command: sudo -n /usr/bin/pmset sleepnow
       changed_when: true
-

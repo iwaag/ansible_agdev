@@ -1,49 +1,69 @@
 all:
   children:
-    ubuntu_knode:
+    linux:
       hosts:
         node1:
           ansible_user: "{{ default_user }}"
+          host_os: linux
+          has_gpu: false
+          power_control: wol
           is_laptop: false
           local_ip: 192.168.1.10
           tailscale_ip: 100.64.0.10
           mac_address: "00:11:22:33:44:55"
           network_interface: enp3s0
-
-    ubuntu_cuda:
-      hosts:
         gpu1:
           ansible_user: "{{ default_user }}"
+          host_os: linux
+          has_gpu: true
+          power_control: wol
           is_laptop: false
           local_ip: 192.168.1.20
           tailscale_ip: 100.64.0.20
           mac_address: "00:11:22:33:44:66"
           network_interface: enp4s0
 
-    mac_llm:
+    macos:
       hosts:
         macstudio1:
           ansible_user: "{{ default_user }}"
+          host_os: macos
+          has_gpu: false
+          power_control: macos_sleep
           is_laptop: false
           local_ip: 192.168.1.30
           tailscale_ip: 100.64.0.30
           mac_address: "00:11:22:33:44:77"
           network_interface: en0
-
-    mac_infra:
-      hosts:
         macmini1:
           ansible_user: "{{ default_user }}"
+          host_os: macos
+          has_gpu: false
+          power_control: macos_sleep
           is_laptop: false
           local_ip: 192.168.1.40
           tailscale_ip: 100.64.0.40
           mac_address: "00:11:22:33:44:88"
           network_interface: en0
 
+    gpu_hosts:
+      hosts:
+        gpu1:
+
+    power_managed:
+      hosts:
+        node1:
+        gpu1:
+        macstudio1:
+        macmini1:
+
     prometheus_server:
       hosts:
         prometheus1:
           ansible_user: "{{ default_user }}"
+          host_os: linux
+          has_gpu: false
+          power_control: none
           is_laptop: false
           local_ip: 192.168.1.50
           tailscale_ip: 100.64.0.50
@@ -52,6 +72,9 @@ all:
       hosts:
         grafana1:
           ansible_user: "{{ default_user }}"
+          host_os: linux
+          has_gpu: false
+          power_control: none
           is_laptop: false
           local_ip: 192.168.1.60
           tailscale_ip: 100.64.0.60
@@ -60,6 +83,9 @@ all:
       hosts:
         homeassistant1:
           ansible_user: "{{ default_user }}"
+          host_os: haos
+          has_gpu: false
+          power_control: none
           is_laptop: false
           local_ip: 192.168.1.70
           tailscale_ip: 100.64.0.70

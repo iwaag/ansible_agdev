@@ -1,6 +1,6 @@
 ---
 - name: Allow the default user to put macOS hosts to sleep without a sudo password
-  hosts: mac_llm:mac_infra
+  hosts: "macos:&power_managed"
   become: true
   gather_facts: false
 

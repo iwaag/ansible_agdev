@@ -1,6 +1,6 @@
 ---
 - name: Send Wake-on-LAN packets from the control node
-  hosts: ubuntu_knode:ubuntu_cuda
+  hosts: "linux:&power_managed"
   gather_facts: false
   connection: local
 

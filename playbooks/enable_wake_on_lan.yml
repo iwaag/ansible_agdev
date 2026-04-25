@@ -1,6 +1,6 @@
 ---
 - name: Enable Wake-on-LAN on selected hosts
-  hosts: ubuntu_knode:ubuntu_cuda
+  hosts: "linux:&power_managed"
   become: true
   gather_facts: false
 
