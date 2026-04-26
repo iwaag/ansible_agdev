@@ -90,7 +90,7 @@
   become: true
   ansible.builtin.copy:
     content: ""
-    path: "{{ item }}"
+    dest: "{{ item }}"
     owner: root
     group: wheel
     mode: "{{ nomad_log_file_mode }}"
