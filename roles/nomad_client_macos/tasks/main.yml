@@ -1,0 +1,132 @@
+---
+- name: Assert Nomad macOS client role is used on Darwin hosts
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Darwin"
+    fail_msg: "nomad_client_macos role currently supports macOS hosts only."
+
+- name: Assert Nomad client has at least one server target
+  ansible.builtin.assert:
+    that:
+      - nomad_client_servers | length > 0
+    fail_msg: >-
+      nomad_client_servers is empty. Add hosts to the nomad_server group or
+      set nomad_client_servers explicitly.
+
+- name: Discover Homebrew executable path
+  ansible.builtin.shell: |
+    for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+      if [ -x "$candidate" ]; then
+        printf '%s\n' "$candidate"
+        exit 0
+      fi
+    done
+    command -v brew
+  register: nomad_brew_path_cmd
+  changed_when: false
+  failed_when: nomad_brew_path_cmd.rc != 0 or nomad_brew_path_cmd.stdout | trim == ""
+
+- name: Set Homebrew executable fact
+  ansible.builtin.set_fact:
+    nomad_brew_path: "{{ nomad_brew_path_cmd.stdout | trim }}"
+
+- name: Discover Homebrew prefix
+  ansible.builtin.command:
+    cmd: "{{ nomad_brew_path }} --prefix"
+  register: nomad_brew_prefix_cmd
+  changed_when: false
+
+- name: Set Nomad binary path fact
+  ansible.builtin.set_fact:
+    nomad_brew_prefix: "{{ nomad_brew_prefix_cmd.stdout | trim }}"
+    nomad_binary_path: "{{ (nomad_brew_prefix_cmd.stdout | trim) ~ '/bin/nomad' }}"
+
+- name: Ensure HashiCorp Homebrew tap is present
+  ansible.builtin.shell: |
+    if ! "{{ nomad_brew_path }}" tap | /usr/bin/grep -qx '{{ nomad_homebrew_tap }}'; then
+      "{{ nomad_brew_path }}" tap "{{ nomad_homebrew_tap }}"
+      echo changed
+    fi
+  register: nomad_brew_tap
+  changed_when: "'changed' in nomad_brew_tap.stdout"
+
+- name: Ensure Nomad is installed with Homebrew
+  ansible.builtin.shell: |
+    if ! "{{ nomad_brew_path }}" list --versions nomad >/dev/null 2>&1; then
+      "{{ nomad_brew_path }}" install "{{ nomad_homebrew_formula }}"
+      echo changed
+    fi
+  register: nomad_brew_install
+  changed_when: "'changed' in nomad_brew_install.stdout"
+
+- name: Ensure Nomad configuration directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ nomad_config_dir }}"
+    state: directory
+    owner: "{{ nomad_config_owner }}"
+    group: "{{ nomad_config_group }}"
+    mode: "{{ nomad_config_dir_mode }}"
+
+- name: Ensure Nomad data directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}"
+    state: directory
+    owner: "{{ nomad_data_owner }}"
+    group: "{{ nomad_data_group }}"
+    mode: "{{ nomad_data_dir_mode }}"
+
+- name: Ensure Nomad log directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ nomad_log_dir }}"
+    state: directory
+    owner: root
+    group: wheel
+    mode: "{{ nomad_log_dir_mode }}"
+
+- name: Ensure Nomad log files exist
+  become: true
+  ansible.builtin.copy:
+    content: ""
+    path: "{{ item }}"
+    owner: root
+    group: wheel
+    mode: "{{ nomad_log_file_mode }}"
+    force: false
+  loop:
+    - "{{ nomad_stdout_log }}"
+    - "{{ nomad_stderr_log }}"
+
+- name: Install Nomad client configuration for macOS
+  become: true
+  ansible.builtin.template:
+    src: nomad.hcl.j2
+    dest: "{{ nomad_config_file }}"
+    owner: "{{ nomad_config_owner }}"
+    group: "{{ nomad_config_group }}"
+    mode: "{{ nomad_config_file_mode }}"
+  notify: Reload Nomad launchd service
+
+- name: Install Nomad launchd plist
+  become: true
+  ansible.builtin.template:
+    src: com.hashicorp.nomad.plist.j2
+    dest: "{{ nomad_launchd_plist }}"
+    owner: root
+    group: wheel
+    mode: "0644"
+  notify: Reload Nomad launchd service
+
+- name: Ensure Nomad launchd service is enabled and started
+  become: true
+  ansible.builtin.shell: |
+    if ! /bin/launchctl print system/{{ nomad_launchd_label }} >/dev/null 2>&1; then
+      /bin/launchctl bootstrap system "{{ nomad_launchd_plist }}"
+      /bin/launchctl enable system/{{ nomad_launchd_label }}
+      /bin/launchctl kickstart -k system/{{ nomad_launchd_label }}
+      echo changed
+    fi
+  register: nomad_launchd_bootstrap
+  changed_when: "'changed' in nomad_launchd_bootstrap.stdout"

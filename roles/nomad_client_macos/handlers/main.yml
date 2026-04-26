@@ -1,0 +1,11 @@
+---
+- name: Reload Nomad launchd service
+  become: true
+  ansible.builtin.shell: |
+    if /bin/launchctl print system/{{ nomad_launchd_label }} >/dev/null 2>&1; then
+      /bin/launchctl bootout system/{{ nomad_launchd_label }}
+    fi
+    /bin/launchctl bootstrap system "{{ nomad_launchd_plist }}"
+    /bin/launchctl enable system/{{ nomad_launchd_label }}
+    /bin/launchctl kickstart -k system/{{ nomad_launchd_label }}
+  changed_when: true

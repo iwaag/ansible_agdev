@@ -1,0 +1,8 @@
+---
+- name: Install and configure Nomad client on macOS
+  hosts: "nomad_client:&macos"
+  gather_facts: true
+  become: false
+
+  roles:
+    - role: nomad_client_macos

@@ -86,6 +86,7 @@ all:
     nomad_client:
       hosts:
         gpu1:
+        macmini1:
 
     haos_server:
       hosts:

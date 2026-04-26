@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>{{ nomad_launchd_label }}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>{{ nomad_binary_path }}</string>
+      <string>agent</string>
+      <string>-config</string>
+      <string>{{ nomad_config_file }}</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{ nomad_stdout_log }}</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ nomad_stderr_log }}</string>
+
+    <key>WorkingDirectory</key>
+    <string>{{ nomad_data_dir }}</string>
+  </dict>
+</plist>

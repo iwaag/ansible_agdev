@@ -1,0 +1,50 @@
+---
+nomad_homebrew_tap: hashicorp/tap
+nomad_homebrew_formula: hashicorp/tap/nomad
+
+nomad_service_name: nomad
+nomad_launchd_label: com.hashicorp.nomad
+nomad_launchd_plist: "/Library/LaunchDaemons/{{ nomad_launchd_label }}.plist"
+
+nomad_config_dir: /etc/nomad.d
+nomad_config_file: "{{ nomad_config_dir }}/nomad.hcl"
+nomad_config_owner: root
+nomad_config_group: wheel
+nomad_config_dir_mode: "0755"
+nomad_config_file_mode: "0644"
+
+nomad_data_dir: /opt/nomad/data
+nomad_data_owner: root
+nomad_data_group: wheel
+nomad_data_dir_mode: "0755"
+
+nomad_log_dir: /var/log/nomad
+nomad_log_dir_mode: "0755"
+nomad_stdout_log: "{{ nomad_log_dir }}/nomad.stdout.log"
+nomad_stderr_log: "{{ nomad_log_dir }}/nomad.stderr.log"
+nomad_log_file_mode: "0644"
+
+nomad_region: global
+nomad_datacenter: dc1
+nomad_log_level: INFO
+
+nomad_bind_addr: "0.0.0.0"
+nomad_advertise_address: "{{ local_ip | default(ansible_host) }}"
+nomad_advertise_http: "{{ nomad_advertise_address }}"
+
+nomad_client_enabled: true
+nomad_server_rpc_port: 4647
+nomad_client_servers: >-
+  {{
+    groups.get('nomad_server', [])
+    | map('extract', hostvars, 'ansible_host')
+    | map('regex_replace', '$', ':' ~ (nomad_server_rpc_port | string))
+    | list
+  }}
+nomad_client_network_interface: "{{ network_interface | default('en0') }}"
+nomad_client_node_class: macos
+nomad_client_meta:
+  host_os: macos
+nomad_client_host_volumes: []
+
+nomad_raw_exec_enabled: true
