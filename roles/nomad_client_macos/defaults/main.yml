@@ -41,7 +41,7 @@ nomad_client_servers: >-
     | map('regex_replace', '$', ':' ~ (nomad_server_rpc_port | string))
     | list
   }}
-nomad_client_network_interface: "{{ network_interface | default('en0') }}"
+nomad_client_network_interface: "{{ network_interface | default('') }}"
 nomad_client_node_class: macos
 nomad_client_meta:
   host_os: macos
