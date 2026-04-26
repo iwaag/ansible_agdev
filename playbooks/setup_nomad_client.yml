@@ -1,6 +1,6 @@
 ---
 - name: Install and configure Nomad client
-  hosts: nomad_client
+  hosts: "nomad_client:&linux"
   become: true
   gather_facts: true
 
