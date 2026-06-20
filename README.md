@@ -77,6 +77,12 @@ Install and configure a Nomad client on macOS (`raw_exec` only):
 ansible-playbook playbooks/setup_nomad_client_macos.yml --limit <host_or_group>
 ```
 
+Install uv on Linux and macOS hosts:
+
+```bash
+ansible-playbook playbooks/setup_uv.yml --limit <host_or_group>
+```
+
 Schedule a macOS host to wake shortly:
 
 ```bash
@@ -137,6 +143,7 @@ The generated file defines `command_line` switches, so the entities should appea
 - `setup_nomad_client.yml` installs Nomad from the official HashiCorp apt repository on `nomad_client`, points clients at the inventory's `nomad_server` hosts by default, and exposes `node_class`, `meta`, and static `host_volume` settings through variables.
 - `setup_nomad_client_macos.yml` installs Nomad via Homebrew on `nomad_client:&macos`, runs it as a system `launchd` daemon, and enables only the `raw_exec` task driver by default.
 - `setup_nomad_client_macos.yml` expects Homebrew to already be installed on the target Mac and uses the host's `network_interface` inventory value, typically `en0`.
+- `setup_uv.yml` installs the pinned uv release from GitHub release archives into `/usr/local/bin` on Linux and macOS x86_64/aarch64 hosts. Override `uv_version` to install a different release.
 - `wake_hosts.yml` is intended for the `mac_llm` and `mac_infra` groups and schedules `pmset` wake two seconds ahead on the selected host.
 - `wake_linux_hosts.yml` uses each selected Linux host's `mac_address` and sends to `255.255.255.255:9`.
 - `generate_home_assistant_power_switches.yml` renders `generated/home_assistant/ansible_power_switches.yaml` for hosts in `ubuntu_knode`, `ubuntu_cuda`, `mac_llm`, and `mac_infra`. State is derived from `local_ip` ping, Linux power on uses `POST /webhook/wake/linux`, macOS power on uses `POST /webhook/wake/macos`, Linux power off uses `POST /webhook/suspend/linux`, and macOS power off uses `POST /webhook/sleep/macos`.

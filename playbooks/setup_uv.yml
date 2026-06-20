@@ -1,0 +1,8 @@
+---
+- name: Install uv
+  hosts: "linux:macos"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: uv

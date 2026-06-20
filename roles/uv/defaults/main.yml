@@ -1,0 +1,35 @@
+---
+uv_version: "0.11.20"
+
+uv_arch_map:
+  x86_64: x86_64
+  amd64: x86_64
+  aarch64: aarch64
+  arm64: aarch64
+
+uv_os_target_map:
+  Linux: unknown-linux-gnu
+  Darwin: apple-darwin
+
+uv_arch: "{{ uv_arch_map.get(ansible_architecture, '') }}"
+uv_os_target: "{{ uv_os_target_map.get(ansible_system, '') }}"
+uv_target: "{{ uv_arch }}-{{ uv_os_target }}"
+
+uv_archive_name: "uv-{{ uv_target }}.tar.gz"
+uv_download_url: "https://github.com/astral-sh/uv/releases/download/{{ uv_version }}/{{ uv_archive_name }}"
+uv_checksum: ""
+
+uv_tmp_dir: /tmp
+uv_extract_base_dir: "{{ uv_tmp_dir }}/uv-{{ uv_version }}-{{ uv_target }}"
+uv_extract_path: "{{ uv_extract_base_dir }}/uv-{{ uv_target }}"
+uv_archive_path: "{{ uv_tmp_dir }}/{{ uv_archive_name }}"
+
+uv_install_dir: /usr/local/bin
+uv_binaries:
+  - uv
+  - uvx
+
+uv_linux_dependencies:
+  - ca-certificates
+  - tar
+  - gzip
