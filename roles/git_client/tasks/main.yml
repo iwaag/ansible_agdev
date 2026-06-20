@@ -1,0 +1,13 @@
+---
+- name: Assert git_client role supports this operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_system == "Linux"
+    fail_msg: >-
+      git_client role supports Linux hosts only.
+      Got ansible_system={{ ansible_system }}.
+
+- name: Install Git packages
+  ansible.builtin.package:
+    name: "{{ git_client_packages }}"
+    state: present
