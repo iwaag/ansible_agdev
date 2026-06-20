@@ -89,6 +89,15 @@ Install Git on Linux hosts:
 ansible-playbook playbooks/setup_git.yml --limit <host_or_group>
 ```
 
+Clone a Git repository and run a one-line command inside it:
+
+```bash
+ansible-playbook playbooks/clone_git_and_run.yml \
+  -e target_hosts=<host_or_group> \
+  -e git_clone_run_repo=https://github.com/example/repo.git \
+  -e 'git_clone_run_command=./run.sh'
+```
+
 Schedule a macOS host to wake shortly:
 
 ```bash
@@ -151,6 +160,7 @@ The generated file defines `command_line` switches, so the entities should appea
 - `setup_nomad_client_macos.yml` expects Homebrew to already be installed on the target Mac and uses the host's `network_interface` inventory value, typically `en0`.
 - `setup_uv.yml` installs the pinned uv release from GitHub release archives into `/usr/local/bin` on Linux and macOS x86_64/aarch64 hosts. Override `uv_version` to install a different release.
 - `setup_git.yml` installs the distro Git package on Linux hosts. Override `git_client_packages` to install related packages such as `git-lfs`.
+- `clone_git_and_run.yml` clones or updates `git_clone_run_repo` into `git_clone_run_dest` (`/tmp/ansible-git-clone-run` by default) and runs `git_clone_run_command` from that directory. Override `git_clone_run_version` to pin a branch, tag, or commit.
 - `wake_hosts.yml` is intended for the `mac_llm` and `mac_infra` groups and schedules `pmset` wake two seconds ahead on the selected host.
 - `wake_linux_hosts.yml` uses each selected Linux host's `mac_address` and sends to `255.255.255.255:9`.
 - `generate_home_assistant_power_switches.yml` renders `generated/home_assistant/ansible_power_switches.yaml` for hosts in `ubuntu_knode`, `ubuntu_cuda`, `mac_llm`, and `mac_infra`. State is derived from `local_ip` ping, Linux power on uses `POST /webhook/wake/linux`, macOS power on uses `POST /webhook/wake/macos`, Linux power off uses `POST /webhook/suspend/linux`, and macOS power off uses `POST /webhook/sleep/macos`.

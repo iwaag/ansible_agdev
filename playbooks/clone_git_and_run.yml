@@ -1,0 +1,41 @@
+---
+- name: Clone a Git repository and run a one-line command
+  hosts: "{{ target_hosts | default('all') }}"
+  become: "{{ git_clone_run_become | default(false) }}"
+  gather_facts: false
+
+  vars:
+    git_clone_run_dest: "/tmp/ansible-git-clone-run"
+    git_clone_run_version: "HEAD"
+
+  pre_tasks:
+    - name: Assert required parameters are provided
+      ansible.builtin.assert:
+        that:
+          - git_clone_run_repo is defined
+          - git_clone_run_repo | length > 0
+          - git_clone_run_command is defined
+          - git_clone_run_command | length > 0
+        fail_msg: >-
+          Set git_clone_run_repo and git_clone_run_command, for example:
+          -e git_clone_run_repo=https://github.com/example/repo.git
+          -e 'git_clone_run_command=./run.sh'
+
+    - name: Ensure Git checkout parent directory exists
+      ansible.builtin.file:
+        path: "{{ git_clone_run_dest | dirname }}"
+        state: directory
+        mode: "0755"
+
+  tasks:
+    - name: Clone or update Git repository
+      ansible.builtin.git:
+        repo: "{{ git_clone_run_repo }}"
+        dest: "{{ git_clone_run_dest }}"
+        version: "{{ git_clone_run_version }}"
+        update: true
+
+    - name: Run command in cloned repository
+      ansible.builtin.shell: "{{ git_clone_run_command }}"
+      args:
+        chdir: "{{ git_clone_run_dest }}"
