@@ -1,0 +1,10 @@
+---
+nautobot_ansible_collection_name: networktocode.nautobot
+nautobot_ansible_collection_version: ""
+nautobot_ansible_collection_upgrade: false
+nautobot_ansible_collection_force: false
+
+nautobot_ansible_python: "{{ ansible_playbook_python }}"
+nautobot_ansible_python_packages:
+  - "pynautobot>=2.0.0"
+nautobot_ansible_pip_extra_args: "--user"

@@ -1,0 +1,11 @@
+---
+- name: Install Nautobot Ansible inventory support
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    ansible_host: localhost
+    local_ip: localhost
+
+  roles:
+    - role: nautobot_ansible_inventory
