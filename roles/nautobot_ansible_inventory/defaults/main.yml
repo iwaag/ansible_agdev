@@ -1,6 +1,6 @@
 ---
 nautobot_ansible_collection_name: networktocode.nautobot
-nautobot_ansible_collection_version: ""
+nautobot_ansible_collection_version: "==5.16.2"
 nautobot_ansible_collection_upgrade: false
 nautobot_ansible_collection_force: false
 
