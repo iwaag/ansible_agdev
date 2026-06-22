@@ -90,6 +90,19 @@ all:
           local_ip: 192.168.1.65
           tailscale_ip: 100.64.0.65
 
+    dnsmasq_server:
+      hosts:
+        node1:
+          dnsmasq_listen_addresses:
+            - 127.0.0.1
+            - 192.168.1.10
+          dnsmasq_interfaces:
+            - enp3s0
+          dnsmasq_local_domain: home.arpa
+          dnsmasq_host_records:
+            - name: node1.home.arpa
+              address: 192.168.1.10
+
     nomad_server:
       hosts:
         node1:

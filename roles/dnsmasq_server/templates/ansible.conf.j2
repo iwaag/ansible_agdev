@@ -1,0 +1,77 @@
+# Managed by Ansible. Local changes will be overwritten.
+
+port={{ dnsmasq_port }}
+
+{% if dnsmasq_domain_needed | bool %}
+domain-needed
+{% endif %}
+{% if dnsmasq_bogus_priv | bool %}
+bogus-priv
+{% endif %}
+{% if dnsmasq_expand_hosts | bool %}
+expand-hosts
+{% endif %}
+{% if dnsmasq_no_resolv | bool %}
+no-resolv
+{% endif %}
+cache-size={{ dnsmasq_cache_size }}
+
+{% for address in dnsmasq_listen_addresses %}
+listen-address={{ address }}
+{% endfor %}
+{% for interface in dnsmasq_interfaces %}
+interface={{ interface }}
+{% endfor %}
+{% if dnsmasq_bind_interfaces | bool %}
+bind-interfaces
+{% endif %}
+
+{% for server in dnsmasq_upstream_servers %}
+server={{ server }}
+{% endfor %}
+
+{% if dnsmasq_local_domain %}
+domain={{ dnsmasq_local_domain }}
+local=/{{ dnsmasq_local_domain }}/
+{% endif %}
+{% for zone in dnsmasq_local_zones %}
+local=/{{ zone }}/
+{% endfor %}
+
+{% for record in dnsmasq_address_records %}
+address=/{{ record.name }}/{{ record.address }}
+{% endfor %}
+{% for record in dnsmasq_cname_records %}
+cname={{ record.alias }},{{ record.target }}
+{% endfor %}
+{% for record in dnsmasq_host_records %}
+host-record={{ record.name }},{{ record.address }}
+{% endfor %}
+{% for record in dnsmasq_mx_records %}
+mx-host={{ record.domain }},{{ record.host }}{% if record.preference is defined %},{{ record.preference }}{% endif %}
+{% endfor %}
+{% for record in dnsmasq_srv_records %}
+srv-host={{ record.service }},{{ record.target }}{% if record.port is defined %},{{ record.port }}{% endif %}{% if record.priority is defined %},{{ record.priority }}{% endif %}{% if record.weight is defined %},{{ record.weight }}{% endif %}
+{% endfor %}
+{% for record in dnsmasq_txt_records %}
+txt-record={{ record.name }},"{{ record.text }}"
+{% endfor %}
+
+{% if dnsmasq_enable_dhcp | bool %}
+{% for dhcp_range in dnsmasq_dhcp_ranges %}
+dhcp-range={{ dhcp_range }}
+{% endfor %}
+{% for option in dnsmasq_dhcp_options %}
+dhcp-option={{ option }}
+{% endfor %}
+{% for host in dnsmasq_dhcp_hosts %}
+dhcp-host={{ host }}
+{% endfor %}
+{% if dnsmasq_dhcp_authoritative | bool %}
+dhcp-authoritative
+{% endif %}
+{% endif %}
+
+{% for line in dnsmasq_extra_config %}
+{{ line }}
+{% endfor %}

@@ -13,3 +13,4 @@ inventories/production/group_vars/all/*
 api/.venv/
 __pycache__/
 generated/
+.env

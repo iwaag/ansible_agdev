@@ -89,6 +89,12 @@ Install Git on Linux hosts:
 ansible-playbook playbooks/setup_git.yml --limit <host_or_group>
 ```
 
+Install and configure dnsmasq on Linux hosts:
+
+```bash
+ansible-playbook playbooks/setup_dnsmasq.yml --limit <host_or_group>
+```
+
 Clone nodeutils on each selected host and write a local inventory report:
 
 ```bash
@@ -189,6 +195,7 @@ The generated file defines `command_line` switches, so the entities should appea
 - `setup_nomad_client_macos.yml` expects Homebrew to already be installed on the target Mac and uses the host's `network_interface` inventory value, typically `en0`.
 - `setup_uv.yml` installs the pinned uv release from GitHub release archives into `/usr/local/bin` on Linux and macOS x86_64/aarch64 hosts. Override `uv_version` to install a different release.
 - `setup_git.yml` installs the distro Git package on Linux hosts. Override `git_client_packages` to install related packages such as `git-lfs`.
+- `setup_dnsmasq.yml` installs the distro `dnsmasq` package on `dnsmasq_server` hosts and writes `/etc/dnsmasq.d/ansible.conf`. Override `dnsmasq_listen_addresses`, `dnsmasq_interfaces`, `dnsmasq_upstream_servers`, `dnsmasq_local_domain`, and record/DHCP lists to fit the network.
 - `run_nodeutils_collect.yml` installs Git on Linux hosts, installs uv on Linux/macOS, clones `nodeutils_repo` into `nodeutils_checkout_dir` (`/opt/nodeutils` by default), runs `uv sync --frozen`, and writes `nodeutils_output_path` (`/var/lib/nodeutils/inventory.json` by default). Override `nodeutils_repo`, `nodeutils_version`, `nodeutils_checkout_dir`, or `nodeutils_collect_args` when needed.
 - `collect_nodeutils_and_ingest_nautobot.yml` runs `run_nodeutils_collect.yml`, fetches reports to `nodeutils_report_local_dir` (`/tmp/ansible-nodeutils-reports` by default), copies them to `nautobot_nodeutils_report_dir` (`/var/tmp/nodeutils-reports` by default) on `nautobot_server_group` (`nautobot_server` by default), and runs the Nautobot `Ingest Nodeutils Inventory` Job by API. It defaults to `nautobot_ingest_dry_run=true`; set `-e nautobot_ingest_dry_run=false` to commit changes after reviewing Job logs. Set `nautobot_url` and `nautobot_token` through extra vars or Vault.
 - `setup_nautobot_ansible_inventory.yml` installs the `networktocode.nautobot` collection and `pynautobot>=2.0.0` on the Ansible control node for the Nautobot dynamic inventory plugin. The collection is pinned to `==5.16.2` by default because `networktocode.nautobot` 6.x requires ansible-core 2.18 or newer. Override `nautobot_ansible_collection_version` to pin a different collection version, `nautobot_ansible_collection_upgrade=true` to upgrade, or `nautobot_ansible_pip_extra_args` if the control node's Python packaging policy requires different pip flags.

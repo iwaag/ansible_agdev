@@ -1,0 +1,35 @@
+---
+- name: Assert target is Linux
+  ansible.builtin.assert:
+    that:
+      - ansible_system == "Linux"
+    fail_msg: "dnsmasq_server role supports Linux targets only."
+
+- name: Install dnsmasq package
+  ansible.builtin.package:
+    name: "{{ dnsmasq_package_name }}"
+    state: present
+
+- name: Ensure dnsmasq configuration directory exists
+  ansible.builtin.file:
+    path: "{{ dnsmasq_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install dnsmasq managed configuration
+  ansible.builtin.template:
+    src: ansible.conf.j2
+    dest: "{{ dnsmasq_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "dnsmasq --test --conf-file=%s"
+  notify: Restart dnsmasq
+
+- name: Ensure dnsmasq service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ dnsmasq_service_name }}"
+    enabled: true
+    state: started

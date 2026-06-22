@@ -1,0 +1,38 @@
+---
+dnsmasq_package_name: dnsmasq
+dnsmasq_service_name: dnsmasq.service
+dnsmasq_config_dir: /etc/dnsmasq.d
+dnsmasq_config_file: "{{ dnsmasq_config_dir }}/ansible.conf"
+
+dnsmasq_port: 53
+dnsmasq_domain_needed: true
+dnsmasq_bogus_priv: true
+dnsmasq_expand_hosts: true
+dnsmasq_no_resolv: true
+dnsmasq_cache_size: 1000
+
+dnsmasq_listen_addresses:
+  - 127.0.0.1
+dnsmasq_interfaces: []
+dnsmasq_bind_interfaces: true
+
+dnsmasq_upstream_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+
+dnsmasq_local_domain: ""
+dnsmasq_local_zones: []
+dnsmasq_address_records: []
+dnsmasq_cname_records: []
+dnsmasq_host_records: []
+dnsmasq_mx_records: []
+dnsmasq_srv_records: []
+dnsmasq_txt_records: []
+
+dnsmasq_enable_dhcp: false
+dnsmasq_dhcp_ranges: []
+dnsmasq_dhcp_options: []
+dnsmasq_dhcp_hosts: []
+dnsmasq_dhcp_authoritative: false
+
+dnsmasq_extra_config: []
