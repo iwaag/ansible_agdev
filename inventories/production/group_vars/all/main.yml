@@ -2,3 +2,4 @@ connection_path: local
 ansible_host: "{{ tailscale_ip if connection_path == 'tailscale' else local_ip }}"
 default_user: "{{ vault_default_user }}"
 ansible_become_password: "{{ vault_ansible_become_password }}"
+nautobot_token: "{{ vault_nautobot_token | default('') }}"

@@ -79,6 +79,17 @@ all:
           local_ip: 192.168.1.60
           tailscale_ip: 100.64.0.60
 
+    nautobot_server:
+      hosts:
+        nautobot1:
+          ansible_user: "{{ default_user }}"
+          host_os: linux
+          has_gpu: false
+          power_control: none
+          is_laptop: false
+          local_ip: 192.168.1.65
+          tailscale_ip: 100.64.0.65
+
     nomad_server:
       hosts:
         node1:

@@ -1,2 +1,3 @@
 vault_default_user: your-login-user
 vault_ansible_become_password: your-sudo-password
+vault_nautobot_token: your-nautobot-api-token

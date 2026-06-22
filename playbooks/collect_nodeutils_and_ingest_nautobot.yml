@@ -1,0 +1,174 @@
+---
+- name: Prepare local nodeutils report staging directory
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    nodeutils_report_local_dir: /tmp/ansible-nodeutils-reports
+
+  tasks:
+    - name: Reset local nodeutils report staging directory
+      ansible.builtin.file:
+        path: "{{ nodeutils_report_local_dir }}"
+        state: absent
+
+    - name: Create local nodeutils report staging directory
+      ansible.builtin.file:
+        path: "{{ nodeutils_report_local_dir }}"
+        state: directory
+        mode: "0700"
+
+- name: Run nodeutils collection on inventory hosts
+  ansible.builtin.import_playbook: run_nodeutils_collect.yml
+  vars:
+    target_hosts: "{{ nodeutils_target_hosts | default('linux:macos') }}"
+
+- name: Fetch nodeutils reports to the Ansible control node
+  hosts: "{{ nodeutils_target_hosts | default('linux:macos') }}"
+  gather_facts: false
+
+  vars:
+    nodeutils_output_path: /var/lib/nodeutils/inventory.json
+    nodeutils_report_local_dir: /tmp/ansible-nodeutils-reports
+
+  tasks:
+    - name: Fetch nodeutils inventory report
+      ansible.builtin.fetch:
+        src: "{{ nodeutils_output_path }}"
+        dest: "{{ nodeutils_report_local_dir }}/{{ inventory_hostname }}.json"
+        flat: true
+
+- name: Copy nodeutils reports to the Nautobot server
+  hosts: "{{ nautobot_server_group | default('nautobot_server') }}"
+  become: true
+  gather_facts: false
+
+  vars:
+    nodeutils_report_local_dir: /tmp/ansible-nodeutils-reports
+    nautobot_nodeutils_report_dir: /var/tmp/nodeutils-reports
+    nautobot_nodeutils_report_owner: nautobot
+    nautobot_nodeutils_report_group: nautobot
+
+  tasks:
+    - name: Ensure Nautobot nodeutils report directory exists
+      ansible.builtin.file:
+        path: "{{ nautobot_nodeutils_report_dir }}"
+        state: directory
+        owner: "{{ nautobot_nodeutils_report_owner }}"
+        group: "{{ nautobot_nodeutils_report_group }}"
+        mode: "0750"
+
+    - name: Copy nodeutils reports to Nautobot server
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ nautobot_nodeutils_report_dir }}/{{ item | basename }}"
+        owner: "{{ nautobot_nodeutils_report_owner }}"
+        group: "{{ nautobot_nodeutils_report_group }}"
+        mode: "0640"
+      loop: "{{ lookup('ansible.builtin.fileglob', nodeutils_report_local_dir ~ '/*.json', wantlist=True) }}"
+
+- name: Run Nautobot nodeutils ingest job
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    nautobot_nodeutils_report_dir: /var/tmp/nodeutils-reports
+    nautobot_ingest_job_name: "Ingest Nodeutils Inventory"
+    nautobot_ingest_dry_run: true
+    nautobot_ingest_policy_file: "seed/nodeutils_ingest.yaml"
+    nautobot_ingest_max_report_age_hours: 72
+    nautobot_ingest_max_report_bytes: 2097152
+    nautobot_validate_certs: true
+
+  tasks:
+    - name: Assert Nautobot API settings are provided
+      ansible.builtin.assert:
+        that:
+          - nautobot_url is defined
+          - nautobot_url | length > 0
+          - nautobot_token is defined
+          - nautobot_token | length > 0
+        fail_msg: >-
+          Set nautobot_url and nautobot_token, for example from Ansible Vault.
+
+    - name: Look up Nautobot ingest job
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/jobs/?q={{ nautobot_ingest_job_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: application/json
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code: 200
+      register: nautobot_job_lookup
+      no_log: true
+
+    - name: Select Nautobot ingest job
+      ansible.builtin.set_fact:
+        nautobot_ingest_job: >-
+          {{
+            (
+              nautobot_job_lookup.json.results
+              | selectattr('name', 'equalto', nautobot_ingest_job_name)
+              | list
+            )[0]
+          }}
+      when: >-
+        (
+          nautobot_job_lookup.json.results
+          | selectattr('name', 'equalto', nautobot_ingest_job_name)
+          | list
+          | length
+        ) > 0
+
+    - name: Assert Nautobot ingest job exists
+      ansible.builtin.assert:
+        that:
+          - nautobot_ingest_job is defined
+          - nautobot_ingest_job.id is defined
+        fail_msg: >-
+          Could not find Nautobot Job named "{{ nautobot_ingest_job_name }}".
+          Sync the nauto Git Repository in Nautobot and enable the Job first.
+
+    - name: Run Nautobot ingest job
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/jobs/{{ nautobot_ingest_job.id }}/run/"
+        method: POST
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: application/json
+          Content-Type: application/json
+        body: >-
+          {{
+            {
+              'data': {
+                'report_path': nautobot_nodeutils_report_dir,
+                'report_text': '',
+                'policy_file': nautobot_ingest_policy_file,
+                'dry_run': nautobot_ingest_dry_run | bool,
+                'max_report_age_hours': nautobot_ingest_max_report_age_hours | int,
+                'max_report_bytes': nautobot_ingest_max_report_bytes | int,
+              },
+              'commit': true,
+            } | to_json
+          }}
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code:
+          - 200
+          - 201
+          - 202
+      register: nautobot_ingest_run
+      no_log: true
+
+    - name: Show Nautobot ingest job result
+      ansible.builtin.debug:
+        msg:
+          job_name: "{{ nautobot_ingest_job.name }}"
+          job_id: "{{ nautobot_ingest_job.id }}"
+          dry_run: "{{ nautobot_ingest_dry_run | bool }}"
+          response_status: "{{ nautobot_ingest_run.status }}"
+          response_location: "{{ nautobot_ingest_run.location | default('') }}"

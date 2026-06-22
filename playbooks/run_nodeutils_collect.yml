@@ -1,0 +1,84 @@
+---
+- name: Clone nodeutils and collect local inventory
+  hosts: "{{ target_hosts | default('linux:macos') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    nodeutils_repo: "https://github.com/iwaag/nodeutils.git"
+    nodeutils_version: "HEAD"
+    nodeutils_user: "{{ ansible_user | default(default_user) }}"
+    nodeutils_home: "{{ '/Users/' ~ nodeutils_user if ansible_system == 'Darwin' else '/home/' ~ nodeutils_user }}"
+    nodeutils_checkout_dir: /opt/nodeutils
+    nodeutils_state_dir: /var/lib/nodeutils
+    nodeutils_output_path: "{{ nodeutils_state_dir }}/inventory.json"
+    nodeutils_collect_args: "--format json --output {{ nodeutils_output_path }}"
+    nodeutils_uv_path: /usr/local/bin/uv
+    nodeutils_extra_path: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+    nodeutils_linux_packages:
+      - pciutils
+
+  pre_tasks:
+    - name: Install Git on Linux hosts
+      ansible.builtin.import_role:
+        name: git_client
+      when: ansible_system == "Linux"
+
+    - name: Install optional nodeutils Linux collection packages
+      ansible.builtin.package:
+        name: "{{ nodeutils_linux_packages }}"
+        state: present
+      when: ansible_system == "Linux"
+
+  roles:
+    - role: uv
+
+  tasks:
+    - name: Ensure nodeutils checkout directory exists
+      ansible.builtin.file:
+        path: "{{ nodeutils_checkout_dir }}"
+        state: directory
+        owner: "{{ nodeutils_user }}"
+        mode: "0755"
+        recurse: true
+
+    - name: Ensure nodeutils state directory exists
+      ansible.builtin.file:
+        path: "{{ nodeutils_state_dir }}"
+        state: directory
+        owner: "{{ nodeutils_user }}"
+        mode: "0700"
+
+    - name: Clone or update nodeutils repository
+      ansible.builtin.git:
+        repo: "{{ nodeutils_repo }}"
+        dest: "{{ nodeutils_checkout_dir }}"
+        version: "{{ nodeutils_version }}"
+        update: true
+      become: true
+      become_user: "{{ nodeutils_user }}"
+      environment:
+        HOME: "{{ nodeutils_home }}"
+        PATH: "{{ nodeutils_extra_path }}"
+
+    - name: Sync nodeutils dependencies with uv
+      ansible.builtin.command:
+        cmd: "{{ nodeutils_uv_path }} sync --frozen"
+        chdir: "{{ nodeutils_checkout_dir }}"
+      become: true
+      become_user: "{{ nodeutils_user }}"
+      environment:
+        HOME: "{{ nodeutils_home }}"
+        PATH: "{{ nodeutils_extra_path }}"
+      changed_when: false
+
+    - name: Run nodeutils inventory collection
+      ansible.builtin.command:
+        cmd: "{{ nodeutils_uv_path }} run nodeutils collect {{ nodeutils_collect_args }}"
+        chdir: "{{ nodeutils_checkout_dir }}"
+      become: true
+      become_user: "{{ nodeutils_user }}"
+      environment:
+        HOME: "{{ nodeutils_home }}"
+        PATH: "{{ nodeutils_extra_path }}"
+      changed_when: true

@@ -64,12 +64,14 @@ The encrypted `vault.yml` should define:
 
 - `vault_default_user`
 - `vault_ansible_become_password`
+- `vault_nautobot_token`
 
 Example:
 
 ```yaml
 vault_default_user: your-login-user
 vault_ansible_become_password: your-sudo-password
+vault_nautobot_token: your-nautobot-api-token
 ```
 
 ## Host inventory notes
@@ -89,6 +91,7 @@ Each host entry can include:
 - `network_interface`
 
 The example inventory also includes a `haos_server` group for the Home Assistant host that receives generated package files.
+It also includes a `nautobot_server` group for the host that receives nodeutils reports before the Nautobot ingest Job runs.
 
 By default, `ansible_host` is derived from `connection_path`:
 
