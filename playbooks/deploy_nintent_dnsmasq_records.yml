@@ -190,9 +190,29 @@
           Accept: application/json
         return_content: true
         validate_certs: "{{ nautobot_validate_certs }}"
-        status_code: 200
+        status_code:
+          - 200
+          - 400
+          - 401
+          - 403
+          - 404
       register: nintent_dnsmasq_file_proxy_lookup
       no_log: true
+
+    - name: Assert Nautobot dnsmasq export file proxy lookup succeeded
+      ansible.builtin.assert:
+        that:
+          - nintent_dnsmasq_file_proxy_lookup.status == 200
+        fail_msg: >-
+          Failed to look up Nautobot file proxies for JobResult
+          "{{ nintent_dnsmasq_job_result_id }}" and file "{{ nintent_dnsmasq_export_filename }}".
+          HTTP status={{ nintent_dnsmasq_file_proxy_lookup.status | default('unknown') }},
+          message={{
+            nintent_dnsmasq_file_proxy_lookup.json.detail
+            | default(nintent_dnsmasq_file_proxy_lookup.json.error
+            | default(nintent_dnsmasq_file_proxy_lookup.msg
+            | default('')))
+          }}.
 
     - name: Select Nautobot dnsmasq export file proxy
       ansible.builtin.set_fact:
