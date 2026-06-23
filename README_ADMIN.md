@@ -59,11 +59,15 @@ The plain variables in `inventories/production/group_vars/all/main.yml` expose:
 - `ansible_host`
 - `default_user`
 - `ansible_become_password`
+- `nautobot_url`
+- `nautobot_token`
+- `nautobot_validate_certs`
 
 The encrypted `vault.yml` should define:
 
 - `vault_default_user`
 - `vault_ansible_become_password`
+- `vault_nautobot_url`
 - `vault_nautobot_token`
 
 Example:
@@ -71,6 +75,7 @@ Example:
 ```yaml
 vault_default_user: your-login-user
 vault_ansible_become_password: your-sudo-password
+vault_nautobot_url: https://nautobot.example.local
 vault_nautobot_token: your-nautobot-api-token
 ```
 

@@ -73,6 +73,9 @@
   connection: local
   gather_facts: false
 
+  vars_files:
+    - ../vars/nautobot.yml
+
   vars:
     nautobot_nodeutils_report_dir: /var/tmp/nodeutils-reports
     nautobot_ingest_job_name: "Ingest Nodeutils Inventory"
@@ -80,7 +83,6 @@
     nautobot_ingest_policy_file: "seed/nodeutils_ingest.yaml"
     nautobot_ingest_max_report_age_hours: 72
     nautobot_ingest_max_report_bytes: 2097152
-    nautobot_validate_certs: true
 
   tasks:
     - name: Assert Nautobot API settings are provided
@@ -91,7 +93,8 @@
           - nautobot_token is defined
           - nautobot_token | length > 0
         fail_msg: >-
-          Set nautobot_url and nautobot_token, for example from Ansible Vault.
+          Set nautobot_url and nautobot_token, for example from NAUTOBOT_URL/NAUTOBOT_TOKEN,
+          extra vars, or Ansible Vault.
 
     - name: Look up Nautobot ingest job
       ansible.builtin.uri:
