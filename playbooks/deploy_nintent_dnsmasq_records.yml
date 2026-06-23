@@ -13,6 +13,7 @@
     nintent_dnsmasq_local_dir: /tmp/ansible-nintent-dnsmasq
     nintent_dnsmasq_local_conf: "{{ nintent_dnsmasq_local_dir }}/dnsmasq-records.conf"
     nintent_dnsmasq_export_filename: dnsmasq-records.conf
+    nintent_dnsmasq_export_file_regex: 'dnsmasq-records(_[A-Za-z0-9]+)?\.conf'
     nintent_dnsmasq_poll_retries: 30
     nintent_dnsmasq_poll_delay: 2
 
@@ -183,54 +184,26 @@
 
     - name: Look up Nautobot dnsmasq export file proxy
       ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/?job_result={{ nintent_dnsmasq_job_result_id }}&name={{ nintent_dnsmasq_export_filename | urlencode }}"
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/"
         method: GET
         headers:
           Authorization: "Token {{ nautobot_token }}"
           Accept: application/json
         return_content: true
         validate_certs: "{{ nautobot_validate_certs }}"
-        status_code:
-          - 200
-          - 400
-          - 401
-          - 403
-          - 404
+        status_code: 200
       register: nintent_dnsmasq_file_proxy_lookup
       no_log: true
 
-    - name: Assert Nautobot dnsmasq export file proxy lookup succeeded
-      ansible.builtin.assert:
-        that:
-          - nintent_dnsmasq_file_proxy_lookup.status == 200
-        fail_msg: >-
-          Failed to look up Nautobot file proxies for JobResult
-          "{{ nintent_dnsmasq_job_result_id }}" and file "{{ nintent_dnsmasq_export_filename }}".
-          HTTP status={{ nintent_dnsmasq_file_proxy_lookup.status | default('unknown') }},
-          message={{
-            nintent_dnsmasq_file_proxy_lookup.json.detail
-            | default(nintent_dnsmasq_file_proxy_lookup.json.error
-            | default(nintent_dnsmasq_file_proxy_lookup.msg
-            | default('')))
-          }}.
-
     - name: Select Nautobot dnsmasq export file proxy
       ansible.builtin.set_fact:
-        nintent_dnsmasq_file_proxy: >-
-          {{
-            (
-              nintent_dnsmasq_file_proxy_lookup.json.results
-              | selectattr('name', 'equalto', nintent_dnsmasq_export_filename)
-              | list
-            )[0]
-          }}
-      when: >-
-        (
-          nintent_dnsmasq_file_proxy_lookup.json.results
-          | selectattr('name', 'equalto', nintent_dnsmasq_export_filename)
-          | list
-          | length
-        ) > 0
+        nintent_dnsmasq_file_proxy: "{{ item }}"
+      loop: "{{ nintent_dnsmasq_file_proxy_lookup.json.results | default([]) }}"
+      when:
+        - nintent_dnsmasq_file_proxy is not defined
+        - item | to_json is search(nintent_dnsmasq_job_result_id)
+        - item | to_json is search(nintent_dnsmasq_export_file_regex)
+      no_log: true
 
     - name: Assert Nautobot dnsmasq export file proxy exists
       ansible.builtin.assert:
@@ -238,8 +211,10 @@
           - nintent_dnsmasq_file_proxy is defined
           - nintent_dnsmasq_file_proxy.id is defined or nintent_dnsmasq_file_proxy.pk is defined
         fail_msg: >-
-          Could not find JobResult file "{{ nintent_dnsmasq_export_filename }}".
-          Confirm the Nautobot token can view extras file proxies.
+          Could not find JobResult file matching "{{ nintent_dnsmasq_export_filename }}"
+          for JobResult "{{ nintent_dnsmasq_job_result_id }}".
+          Confirm the Nautobot token can view extras file proxies and the file proxy
+          appears in /api/extras/file-proxies/.
 
     - name: Set Nautobot dnsmasq export file proxy id
       ansible.builtin.set_fact:
