@@ -15,6 +15,9 @@ dnsmasq_listen_addresses:
   - 127.0.0.1
 dnsmasq_interfaces: []
 dnsmasq_bind_interfaces: true
+dnsmasq_manage_systemd_resolved_stub: true
+dnsmasq_systemd_resolved_dropin_dir: /etc/systemd/resolved.conf.d
+dnsmasq_systemd_resolved_dropin_file: "{{ dnsmasq_systemd_resolved_dropin_dir }}/ansible-dnsmasq.conf"
 
 dnsmasq_upstream_servers:
   - 1.1.1.1

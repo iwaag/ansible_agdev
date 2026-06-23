@@ -18,6 +18,54 @@
     group: root
     mode: "0755"
 
+- name: Gather service facts for systemd-resolved detection
+  ansible.builtin.service_facts:
+  when:
+    - ansible_service_mgr == "systemd"
+    - dnsmasq_manage_systemd_resolved_stub | bool
+    - dnsmasq_port | int == 53
+
+- name: Ensure systemd-resolved drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ dnsmasq_systemd_resolved_dropin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - ansible_service_mgr == "systemd"
+    - dnsmasq_manage_systemd_resolved_stub | bool
+    - dnsmasq_port | int == 53
+    - ansible_facts.services is defined
+    - "'systemd-resolved.service' in ansible_facts.services"
+
+- name: Disable systemd-resolved DNS stub listener for dnsmasq
+  ansible.builtin.copy:
+    dest: "{{ dnsmasq_systemd_resolved_dropin_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Resolve]
+      DNSStubListener=no
+  register: dnsmasq_systemd_resolved_stub
+  when:
+    - ansible_service_mgr == "systemd"
+    - dnsmasq_manage_systemd_resolved_stub | bool
+    - dnsmasq_port | int == 53
+    - ansible_facts.services is defined
+    - "'systemd-resolved.service' in ansible_facts.services"
+
+- name: Restart systemd-resolved after disabling DNS stub listener
+  ansible.builtin.systemd:
+    name: systemd-resolved.service
+    state: restarted
+  when:
+    - dnsmasq_systemd_resolved_stub is changed
+    - ansible_facts.services is defined
+    - "'systemd-resolved.service' in ansible_facts.services"
+    - ansible_facts.services['systemd-resolved.service'].state == 'running'
+
 - name: Install dnsmasq managed configuration
   ansible.builtin.template:
     src: ansible.conf.j2

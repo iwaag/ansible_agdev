@@ -1,0 +1,294 @@
+---
+- name: Export nintent dnsmasq records from Nautobot
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    nintent_dnsmasq_job_name: "Export dnsmasq Records"
+    nintent_dnsmasq_include_skipped: true
+    nintent_dnsmasq_local_dir: /tmp/ansible-nintent-dnsmasq
+    nintent_dnsmasq_local_conf: "{{ nintent_dnsmasq_local_dir }}/dnsmasq-records.conf"
+    nintent_dnsmasq_export_filename: dnsmasq-records.conf
+    nintent_dnsmasq_poll_retries: 30
+    nintent_dnsmasq_poll_delay: 2
+    nautobot_validate_certs: true
+
+  tasks:
+    - name: Assert Nautobot API settings are provided
+      ansible.builtin.assert:
+        that:
+          - nautobot_url is defined
+          - nautobot_url | length > 0
+          - nautobot_token is defined
+          - nautobot_token | length > 0
+        fail_msg: >-
+          Set nautobot_url and nautobot_token, for example from Ansible Vault.
+
+    - name: Reset local nintent dnsmasq staging directory
+      ansible.builtin.file:
+        path: "{{ nintent_dnsmasq_local_dir }}"
+        state: absent
+
+    - name: Create local nintent dnsmasq staging directory
+      ansible.builtin.file:
+        path: "{{ nintent_dnsmasq_local_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Look up Nautobot dnsmasq export job
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/jobs/?q={{ nintent_dnsmasq_job_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: application/json
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code: 200
+      register: nintent_dnsmasq_job_lookup
+      no_log: true
+
+    - name: Select Nautobot dnsmasq export job
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_job: >-
+          {{
+            (
+              nintent_dnsmasq_job_lookup.json.results
+              | selectattr('name', 'equalto', nintent_dnsmasq_job_name)
+              | list
+            )[0]
+          }}
+      when: >-
+        (
+          nintent_dnsmasq_job_lookup.json.results
+          | selectattr('name', 'equalto', nintent_dnsmasq_job_name)
+          | list
+          | length
+        ) > 0
+
+    - name: Assert Nautobot dnsmasq export job exists
+      ansible.builtin.assert:
+        that:
+          - nintent_dnsmasq_job is defined
+          - nintent_dnsmasq_job.id is defined
+        fail_msg: >-
+          Could not find Nautobot Job named "{{ nintent_dnsmasq_job_name }}".
+          Confirm nintent is installed, jobs are registered, and the Job is enabled.
+
+    - name: Run Nautobot dnsmasq export job
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/jobs/{{ nintent_dnsmasq_job.id }}/run/"
+        method: POST
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: application/json
+          Content-Type: application/json
+        body: >-
+          {{
+            {
+              'data': {
+                'include_skipped': nintent_dnsmasq_include_skipped | bool,
+              },
+              'commit': true,
+            } | to_json
+          }}
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code:
+          - 200
+          - 201
+          - 202
+      register: nintent_dnsmasq_run
+      no_log: true
+
+    - name: Determine Nautobot dnsmasq export JobResult id
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_job_result_url: >-
+          {{
+            nintent_dnsmasq_run.location
+            | default(nintent_dnsmasq_run.json.job_result.url | default(nintent_dnsmasq_run.json.result.url | default(nintent_dnsmasq_run.json.url | default(''))))
+          }}
+        nintent_dnsmasq_job_result_id_from_body: >-
+          {{
+            nintent_dnsmasq_run.json.job_result.id
+            | default(nintent_dnsmasq_run.json.job_result.pk | default(nintent_dnsmasq_run.json.result.id | default(nintent_dnsmasq_run.json.job_result | default(nintent_dnsmasq_run.json.id | default('')))))
+          }}
+
+    - name: Determine Nautobot dnsmasq export JobResult id from URL
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_job_result_id_from_url: >-
+          {{
+            nintent_dnsmasq_job_result_url
+            | regex_replace('^.*/api/extras/job-results/([^/]+)/?.*$', '\1')
+          }}
+      when: nintent_dnsmasq_job_result_url is search('/api/extras/job-results/')
+
+    - name: Set Nautobot dnsmasq export JobResult id
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_job_result_id: >-
+          {{
+            nintent_dnsmasq_job_result_id_from_body
+            if nintent_dnsmasq_job_result_id_from_body | length > 0
+            else nintent_dnsmasq_job_result_id_from_url | default('')
+          }}
+
+    - name: Assert Nautobot dnsmasq export JobResult id was found
+      ansible.builtin.assert:
+        that:
+          - nintent_dnsmasq_job_result_id | length > 0
+        fail_msg: >-
+          Could not determine JobResult id from Nautobot Job run response.
+
+    - name: Normalize Nautobot dnsmasq export JobResult id
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_job_result_id: >-
+          {{
+            nintent_dnsmasq_job_result_id
+            | regex_replace('^.*/api/extras/job-results/([^/]+)/?.*$', '\1')
+          }}
+      when: nintent_dnsmasq_job_result_id is search('/api/extras/job-results/')
+
+    - name: Wait for Nautobot dnsmasq export job to finish
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/job-results/{{ nintent_dnsmasq_job_result_id }}/"
+        method: GET
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: application/json
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code: 200
+      register: nintent_dnsmasq_job_result
+      until: >-
+        (
+          nintent_dnsmasq_job_result.json.status.value | default(nintent_dnsmasq_job_result.json.status) | string | lower
+        ) in ['completed', 'success', 'successful', 'failed', 'failure', 'errored', 'error', 'revoked', 'canceled', 'cancelled']
+      retries: "{{ nintent_dnsmasq_poll_retries }}"
+      delay: "{{ nintent_dnsmasq_poll_delay }}"
+      no_log: true
+
+    - name: Assert Nautobot dnsmasq export job succeeded
+      ansible.builtin.assert:
+        that:
+          - >-
+            (
+              nintent_dnsmasq_job_result.json.status.value | default(nintent_dnsmasq_job_result.json.status) | string | lower
+            ) in ['completed', 'success', 'successful']
+        fail_msg: >-
+          Nautobot Job "{{ nintent_dnsmasq_job_name }}" did not succeed.
+
+    - name: Look up Nautobot dnsmasq export file proxy
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/?job_result={{ nintent_dnsmasq_job_result_id }}&name={{ nintent_dnsmasq_export_filename | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: application/json
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code: 200
+      register: nintent_dnsmasq_file_proxy_lookup
+      no_log: true
+
+    - name: Select Nautobot dnsmasq export file proxy
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_file_proxy: >-
+          {{
+            (
+              nintent_dnsmasq_file_proxy_lookup.json.results
+              | selectattr('name', 'equalto', nintent_dnsmasq_export_filename)
+              | list
+            )[0]
+          }}
+      when: >-
+        (
+          nintent_dnsmasq_file_proxy_lookup.json.results
+          | selectattr('name', 'equalto', nintent_dnsmasq_export_filename)
+          | list
+          | length
+        ) > 0
+
+    - name: Assert Nautobot dnsmasq export file proxy exists
+      ansible.builtin.assert:
+        that:
+          - nintent_dnsmasq_file_proxy is defined
+          - nintent_dnsmasq_file_proxy.id is defined or nintent_dnsmasq_file_proxy.pk is defined
+        fail_msg: >-
+          Could not find JobResult file "{{ nintent_dnsmasq_export_filename }}".
+          Confirm the Nautobot token can view extras file proxies.
+
+    - name: Set Nautobot dnsmasq export file proxy id
+      ansible.builtin.set_fact:
+        nintent_dnsmasq_file_proxy_id: "{{ nintent_dnsmasq_file_proxy.id | default(nintent_dnsmasq_file_proxy.pk) }}"
+
+    - name: Download Nautobot dnsmasq records conf
+      ansible.builtin.uri:
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/{{ nintent_dnsmasq_file_proxy_id }}/download/"
+        method: GET
+        headers:
+          Authorization: "Token {{ nautobot_token }}"
+          Accept: text/plain
+        return_content: true
+        validate_certs: "{{ nautobot_validate_certs }}"
+        status_code: 200
+      register: nintent_dnsmasq_records_conf
+      no_log: true
+
+    - name: Write local nintent dnsmasq records conf
+      ansible.builtin.copy:
+        content: "{{ nintent_dnsmasq_records_conf.content }}"
+        dest: "{{ nintent_dnsmasq_local_conf }}"
+        mode: "0600"
+
+    - name: Show nintent dnsmasq export result
+      ansible.builtin.debug:
+        msg:
+          job_name: "{{ nintent_dnsmasq_job.name }}"
+          job_id: "{{ nintent_dnsmasq_job.id }}"
+          job_result_id: "{{ nintent_dnsmasq_job_result_id }}"
+          file_proxy_id: "{{ nintent_dnsmasq_file_proxy_id }}"
+          local_conf: "{{ nintent_dnsmasq_local_conf }}"
+
+- name: Deploy nintent dnsmasq records to dnsmasq servers
+  hosts: dnsmasq_server
+  become: true
+  gather_facts: true
+
+  vars:
+    dnsmasq_service_name: dnsmasq.service
+    dnsmasq_config_dir: /etc/dnsmasq.d
+    nintent_dnsmasq_local_dir: /tmp/ansible-nintent-dnsmasq
+    nintent_dnsmasq_local_conf: "{{ nintent_dnsmasq_local_dir }}/dnsmasq-records.conf"
+    nintent_dnsmasq_config_file: "{{ dnsmasq_config_dir }}/nintent-records.conf"
+
+  handlers:
+    - name: Restart dnsmasq
+      ansible.builtin.systemd:
+        name: "{{ dnsmasq_service_name }}"
+        state: restarted
+
+  tasks:
+    - name: Assert target is Linux
+      ansible.builtin.assert:
+        that:
+          - ansible_system == "Linux"
+        fail_msg: "nintent dnsmasq record deployment supports Linux targets only."
+
+    - name: Ensure dnsmasq configuration directory exists
+      ansible.builtin.file:
+        path: "{{ dnsmasq_config_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install nintent dnsmasq records configuration
+      ansible.builtin.copy:
+        src: "{{ nintent_dnsmasq_local_conf }}"
+        dest: "{{ nintent_dnsmasq_config_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+        validate: "dnsmasq --test --conf-file=%s"
+      notify: Restart dnsmasq
