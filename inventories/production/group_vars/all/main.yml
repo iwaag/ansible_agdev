@@ -1,5 +1,10 @@
 connection_path: local
-ansible_host: "{{ tailscale_ip if connection_path == 'tailscale' else local_ip }}"
+ansible_host: >-
+  {{
+    tailscale_ip
+    if connection_path == 'tailscale' and tailscale_ip is defined
+    else local_ip | default(inventory_hostname)
+  }}
 default_user: "{{ vault_default_user }}"
 ansible_become_password: "{{ vault_ansible_become_password }}"
 nautobot_url: >-

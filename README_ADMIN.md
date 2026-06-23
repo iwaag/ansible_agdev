@@ -102,6 +102,7 @@ By default, `ansible_host` is derived from `connection_path`:
 
 - `connection_path: local` uses `local_ip`
 - `connection_path: tailscale` uses `tailscale_ip`
+- Hosts without those variables, such as implicit `localhost`, fall back to the inventory hostname.
 
 You can switch the route for a run like this:
 
