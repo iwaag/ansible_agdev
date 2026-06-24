@@ -14,6 +14,7 @@
     nintent_dnsmasq_local_conf: "{{ nintent_dnsmasq_local_dir }}/dnsmasq-records.conf"
     nintent_dnsmasq_export_filename: dnsmasq-records.conf
     nintent_dnsmasq_export_file_regex: 'dnsmasq-records(_[A-Za-z0-9]+)?\.conf'
+    nintent_dnsmasq_expected_schema_version: "3.0"
     nintent_dnsmasq_poll_retries: 30
     nintent_dnsmasq_poll_delay: 2
 
@@ -220,7 +221,7 @@
       ansible.builtin.set_fact:
         nintent_dnsmasq_file_proxy_id: "{{ nintent_dnsmasq_file_proxy.id | default(nintent_dnsmasq_file_proxy.pk) }}"
 
-    - name: Download Nautobot dnsmasq records conf
+    - name: Download Nautobot dnsmasq records and ranges conf
       ansible.builtin.uri:
         url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/{{ nintent_dnsmasq_file_proxy_id }}/download/"
         method: GET
@@ -233,7 +234,18 @@
       register: nintent_dnsmasq_records_conf
       no_log: true
 
-    - name: Write local nintent dnsmasq records conf
+    - name: Assert Nautobot dnsmasq export schema is supported
+      ansible.builtin.assert:
+        that:
+          - >-
+            nintent_dnsmasq_records_conf.content
+            is search('# schema_version: ' ~ nintent_dnsmasq_expected_schema_version)
+        fail_msg: >-
+          The downloaded nintent dnsmasq export is not schema
+          {{ nintent_dnsmasq_expected_schema_version }}. Re-run the Nautobot
+          nintent export after deploying the IPAM intent dnsmasq range changes.
+
+    - name: Write local nintent dnsmasq records and ranges conf
       ansible.builtin.copy:
         content: "{{ nintent_dnsmasq_records_conf.content }}"
         dest: "{{ nintent_dnsmasq_local_conf }}"
@@ -246,9 +258,10 @@
           job_id: "{{ nintent_dnsmasq_job.id }}"
           job_result_id: "{{ nintent_dnsmasq_job_result_id }}"
           file_proxy_id: "{{ nintent_dnsmasq_file_proxy_id }}"
+          schema_version: "{{ nintent_dnsmasq_expected_schema_version }}"
           local_conf: "{{ nintent_dnsmasq_local_conf }}"
 
-- name: Deploy nintent dnsmasq records to dnsmasq servers
+- name: Deploy nintent dnsmasq records and ranges to dnsmasq servers
   hosts: dnsmasq_server
   become: true
   gather_facts: true
@@ -281,7 +294,7 @@
         group: root
         mode: "0755"
 
-    - name: Install nintent dnsmasq records configuration
+    - name: Install nintent dnsmasq records and ranges configuration
       ansible.builtin.copy:
         src: "{{ nintent_dnsmasq_local_conf }}"
         dest: "{{ nintent_dnsmasq_config_file }}"
