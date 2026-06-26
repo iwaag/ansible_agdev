@@ -2,10 +2,10 @@
 - name: Run nodeutils collection on inventory hosts
   ansible.builtin.import_playbook: run_nodeutils_collect.yml
   vars:
-    target_hosts: "{{ nodeutils_target_hosts | default('linux:macos') }}"
+    target_hosts: "{{ nodeutils_target_hosts | default('ssh_hosts') }}"
 
 - name: Read nodeutils reports for batch ingest
-  hosts: "{{ nodeutils_target_hosts | default('linux:macos') }}"
+  hosts: "{{ nodeutils_target_hosts | default('ssh_hosts') }}"
   gather_facts: false
 
   vars:

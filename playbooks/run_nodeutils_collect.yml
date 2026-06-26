@@ -1,6 +1,6 @@
 ---
 - name: Clone nodeutils and collect local inventory
-  hosts: "{{ target_hosts | default('linux:macos') }}"
+  hosts: "{{ target_hosts | default('ssh_hosts') }}"
   become: true
   gather_facts: true
 
