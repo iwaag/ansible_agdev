@@ -91,6 +91,8 @@ Each host entry can include:
 
 - `ansible_user`
 - `local_ip`
+- `local_dns_hostname`
+- `mdns_hostname`
 - `tailscale_ip`
 - `mac_address`
 - `network_interface`
@@ -100,7 +102,7 @@ It also includes a `nautobot_server` group for the host that receives nodeutils 
 
 By default, `ansible_host` is derived from `connection_path`:
 
-- `connection_path: local` uses `local_ip`
+- `connection_path: local` uses `local_ip`, then `local_dns_hostname`, then `mdns_hostname`
 - `connection_path: tailscale` uses `tailscale_ip`
 - Hosts without those variables, such as implicit `localhost`, fall back to the inventory hostname.
 

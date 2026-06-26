@@ -9,6 +9,7 @@ all:
           power_control: wol
           is_laptop: false
           local_ip: 192.168.1.10
+          local_dns_hostname: node1.local
           tailscale_ip: 100.64.0.10
           mac_address: "00:11:22:33:44:55"
           network_interface: enp3s0
@@ -32,6 +33,7 @@ all:
           power_control: macos_sleep
           is_laptop: false
           local_ip: 192.168.1.30
+          local_dns_hostname: macstudio1.local
           tailscale_ip: 100.64.0.30
           mac_address: "00:11:22:33:44:77"
           network_interface: en0

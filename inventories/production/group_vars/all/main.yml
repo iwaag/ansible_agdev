@@ -1,9 +1,14 @@
 connection_path: local
+local_connection_host: >-
+  {{
+    local_ip
+    | default(local_dns_hostname | default(mdns_hostname | default(inventory_hostname, true), true), true)
+  }}
 ansible_host: >-
   {{
-    tailscale_ip
-    if connection_path == 'tailscale' and tailscale_ip is defined
-    else local_ip | default(inventory_hostname)
+    tailscale_ip | default(local_connection_host, true)
+    if connection_path == 'tailscale'
+    else local_connection_host
   }}
 default_user: "{{ vault_default_user }}"
 ansible_become_password: "{{ vault_ansible_become_password }}"

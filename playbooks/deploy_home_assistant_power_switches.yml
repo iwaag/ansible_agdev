@@ -34,13 +34,18 @@
           - home_assistant_power_hosts | length > 0
         fail_msg: "No hosts were found in the power_managed group."
 
-    - name: Assert supported hosts define local_ip
+    - name: Assert supported hosts define a local state target
       ansible.builtin.assert:
         that:
-          - hostvars[item].local_ip is defined
-          - hostvars[item].local_ip | length > 0
+          - >-
+            (
+              hostvars[item].local_ip
+              | default(hostvars[item].local_dns_hostname | default(hostvars[item].mdns_hostname | default('', true), true), true)
+              | length
+            ) > 0
         fail_msg: >-
-          Host {{ item }} must define local_ip to generate a Home Assistant power switch.
+          Host {{ item }} must define local_ip, local_dns_hostname, or mdns_hostname
+          to generate a Home Assistant power switch.
       loop: "{{ home_assistant_power_hosts }}"
 
     - name: Assert Linux power-managed hosts define mac_address

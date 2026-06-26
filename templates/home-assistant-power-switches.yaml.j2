@@ -7,6 +7,7 @@
 command_line:
 {% for host_name in home_assistant_power_hosts | sort %}
 {% set host = hostvars[host_name] %}
+{% set local_state_host = host.local_ip | default(host.local_dns_hostname | default(host.mdns_hostname | default('', true), true), true) %}
 {% if host.host_os == 'linux' %}
 {% set power_on_endpoint = '/webhook/wake/linux' %}
 {% set power_off_endpoint = '/webhook/suspend/linux' %}
@@ -35,6 +36,6 @@ command_line:
         {{ (base_url ~ power_off_endpoint) | quote }}
       command_state: >-
         ping -c {{ ping_count }} -W {{ ping_timeout }}
-        {{ hostvars[host_name].local_ip | quote }} >/dev/null 2>&1 && echo ON || echo OFF
+        {{ local_state_host | quote }} >/dev/null 2>&1 && echo ON || echo OFF
       value_template: "{% raw %}{{ value == 'ON' }}{% endraw %}"
 {% endfor %}
