@@ -20,7 +20,7 @@
 
     - name: Record hosts included in the ingest batch
       ansible.builtin.set_fact:
-        nodeutils_ingest_hosts: "{{ ansible_play_hosts_all }}"
+        nodeutils_ingest_hosts: "{{ ansible_play_hosts }}"
       delegate_to: localhost
       delegate_facts: true
       run_once: true
@@ -70,6 +70,7 @@
             ]
           }}
       loop: "{{ hostvars.localhost.nodeutils_ingest_hosts | default([]) }}"
+      when: hostvars[item].nodeutils_report_slurp is defined
       no_log: true
 
     - name: Assert nodeutils report batch is not empty
