@@ -35,7 +35,7 @@
 
   vars:
     nautobot_ingest_job_name: "Ingest Nodeutils Inventory"
-    nautobot_ingest_dry_run: true
+    nautobot_ingest_dry_run: false
     nautobot_ingest_policy_file: "seed/nodeutils_ingest.yaml"
     nautobot_ingest_max_report_age_hours: 72
     nautobot_ingest_max_report_bytes: 2097152
