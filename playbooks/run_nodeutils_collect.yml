@@ -13,7 +13,7 @@
     nodeutils_state_dir: /var/lib/nodeutils
     nodeutils_output_path: "{{ nodeutils_state_dir }}/inventory.json"
     nodeutils_collect_args: "--format json --output {{ nodeutils_output_path }}"
-    nodeutils_uv_path: /usr/local/bin/uv
+    nodeutils_uv_path: "{{ '/opt/homebrew/bin/uv' if ansible_system == 'Darwin' else '/usr/local/bin/uv' }}"
     nodeutils_extra_path: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     nodeutils_linux_packages:
       - pciutils

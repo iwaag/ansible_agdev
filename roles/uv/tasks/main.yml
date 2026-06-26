@@ -5,10 +5,33 @@
       - ansible_system in uv_os_target_map
       - uv_arch | length > 0
       - uv_os_target | length > 0
+      - ansible_system != "Darwin" or ansible_architecture in ["arm64", "aarch64"]
     fail_msg: >-
-      uv role supports Linux/macOS on x86_64/aarch64 only.
+      uv role supports Linux on x86_64/aarch64 and Apple Silicon macOS.
       Got ansible_system={{ ansible_system }} and
       ansible_architecture={{ ansible_architecture }}.
+
+- name: Check Homebrew is installed on Apple Silicon macOS
+  ansible.builtin.stat:
+    path: "{{ uv_homebrew_bin }}"
+  register: uv_homebrew_stat
+  when: ansible_system == "Darwin"
+
+- name: Assert Homebrew is installed on Apple Silicon macOS
+  ansible.builtin.assert:
+    that:
+      - uv_homebrew_stat.stat.exists
+    fail_msg: >-
+      Homebrew must be installed at {{ uv_homebrew_bin }} before installing uv
+      on Apple Silicon macOS.
+  when: ansible_system == "Darwin"
+
+- name: Install uv with Homebrew on Apple Silicon macOS
+  ansible.builtin.command:
+    cmd: "{{ uv_homebrew_bin }} install uv"
+    creates: "{{ uv_homebrew_prefix }}/bin/uv"
+  become: false
+  when: ansible_system == "Darwin"
 
 - name: Install uv download dependencies on Debian-family hosts
   ansible.builtin.package:
@@ -23,16 +46,18 @@
     path: "{{ uv_install_dir }}"
     state: directory
     owner: root
-    group: "{{ 'wheel' if ansible_system == 'Darwin' else 'root' }}"
+    group: root
     mode: "0755"
+  when: ansible_system == "Linux"
 
 - name: Ensure uv extraction directory exists
   ansible.builtin.file:
     path: "{{ uv_extract_base_dir }}"
     state: directory
     owner: root
-    group: "{{ 'wheel' if ansible_system == 'Darwin' else 'root' }}"
+    group: root
     mode: "0755"
+  when: ansible_system == "Linux"
 
 - name: Download uv release archive
   ansible.builtin.get_url:
@@ -40,6 +65,7 @@
     dest: "{{ uv_archive_path }}"
     checksum: "{{ uv_checksum | default(omit, true) }}"
     mode: "0644"
+  when: ansible_system == "Linux"
 
 - name: Extract uv release archive
   ansible.builtin.unarchive:
@@ -47,6 +73,7 @@
     dest: "{{ uv_extract_base_dir }}"
     remote_src: true
     creates: "{{ uv_extract_path }}/uv"
+  when: ansible_system == "Linux"
 
 - name: Install uv binaries
   ansible.builtin.copy:
@@ -54,6 +81,7 @@
     dest: "{{ uv_install_dir }}/{{ item }}"
     remote_src: true
     owner: root
-    group: "{{ 'wheel' if ansible_system == 'Darwin' else 'root' }}"
+    group: root
     mode: "0755"
   loop: "{{ uv_binaries }}"
+  when: ansible_system == "Linux"

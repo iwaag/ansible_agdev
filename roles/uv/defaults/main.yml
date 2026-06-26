@@ -29,6 +29,9 @@ uv_binaries:
   - uv
   - uvx
 
+uv_homebrew_prefix: /opt/homebrew
+uv_homebrew_bin: "{{ uv_homebrew_prefix }}/bin/brew"
+
 uv_linux_dependencies:
   - ca-certificates
   - tar
