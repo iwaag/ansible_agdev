@@ -98,7 +98,7 @@ Each host entry can include:
 - `network_interface`
 
 The example inventory also includes a `haos_server` group for the Home Assistant host that receives generated package files.
-It also includes a `nautobot_server` group for the host that receives nodeutils reports before the Nautobot ingest Job runs.
+Nodeutils ingest submits reports to Nautobot by API and does not require a Nautobot server SSH target.
 
 By default, `ansible_host` is derived from `connection_path`:
 

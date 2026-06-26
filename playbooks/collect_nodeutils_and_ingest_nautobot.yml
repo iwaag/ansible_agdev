@@ -1,72 +1,29 @@
 ---
-- name: Prepare local nodeutils report staging directory
-  hosts: localhost
-  connection: local
-  gather_facts: false
-
-  vars:
-    nodeutils_report_local_dir: /tmp/ansible-nodeutils-reports
-
-  tasks:
-    - name: Reset local nodeutils report staging directory
-      ansible.builtin.file:
-        path: "{{ nodeutils_report_local_dir }}"
-        state: absent
-
-    - name: Create local nodeutils report staging directory
-      ansible.builtin.file:
-        path: "{{ nodeutils_report_local_dir }}"
-        state: directory
-        mode: "0700"
-
 - name: Run nodeutils collection on inventory hosts
   ansible.builtin.import_playbook: run_nodeutils_collect.yml
   vars:
     target_hosts: "{{ nodeutils_target_hosts | default('linux:macos') }}"
 
-- name: Fetch nodeutils reports to the Ansible control node
+- name: Read nodeutils reports for batch ingest
   hosts: "{{ nodeutils_target_hosts | default('linux:macos') }}"
   gather_facts: false
 
   vars:
     nodeutils_output_path: /var/lib/nodeutils/inventory.json
-    nodeutils_report_local_dir: /tmp/ansible-nodeutils-reports
 
   tasks:
-    - name: Fetch nodeutils inventory report
-      ansible.builtin.fetch:
+    - name: Read nodeutils inventory report
+      ansible.builtin.slurp:
         src: "{{ nodeutils_output_path }}"
-        dest: "{{ nodeutils_report_local_dir }}/{{ inventory_hostname }}.json"
-        flat: true
+      register: nodeutils_report_slurp
+      no_log: true
 
-- name: Copy nodeutils reports to the Nautobot server
-  hosts: "{{ nautobot_server_group | default('nautobot_server') }}"
-  become: true
-  gather_facts: false
-
-  vars:
-    nodeutils_report_local_dir: /tmp/ansible-nodeutils-reports
-    nautobot_nodeutils_report_dir: /var/tmp/nodeutils-reports
-    nautobot_nodeutils_report_owner: nautobot
-    nautobot_nodeutils_report_group: nautobot
-
-  tasks:
-    - name: Ensure Nautobot nodeutils report directory exists
-      ansible.builtin.file:
-        path: "{{ nautobot_nodeutils_report_dir }}"
-        state: directory
-        owner: "{{ nautobot_nodeutils_report_owner }}"
-        group: "{{ nautobot_nodeutils_report_group }}"
-        mode: "0750"
-
-    - name: Copy nodeutils reports to Nautobot server
-      ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: "{{ nautobot_nodeutils_report_dir }}/{{ item | basename }}"
-        owner: "{{ nautobot_nodeutils_report_owner }}"
-        group: "{{ nautobot_nodeutils_report_group }}"
-        mode: "0640"
-      loop: "{{ lookup('ansible.builtin.fileglob', nodeutils_report_local_dir ~ '/*.json', wantlist=True) }}"
+    - name: Record hosts included in the ingest batch
+      ansible.builtin.set_fact:
+        nodeutils_ingest_hosts: "{{ ansible_play_hosts_all }}"
+      delegate_to: localhost
+      delegate_facts: true
+      run_once: true
 
 - name: Run Nautobot nodeutils ingest job
   hosts: localhost
@@ -77,7 +34,6 @@
     - ../vars/nautobot.yml
 
   vars:
-    nautobot_nodeutils_report_dir: /var/tmp/nodeutils-reports
     nautobot_ingest_job_name: "Ingest Nodeutils Inventory"
     nautobot_ingest_dry_run: true
     nautobot_ingest_policy_file: "seed/nodeutils_ingest.yaml"
@@ -95,6 +51,39 @@
         fail_msg: >-
           Set nautobot_url and nautobot_token, for example from NAUTOBOT_URL/NAUTOBOT_TOKEN,
           extra vars, or Ansible Vault.
+
+    - name: Initialize nodeutils report batch entries
+      ansible.builtin.set_fact:
+        nodeutils_report_entries: []
+      no_log: true
+
+    - name: Build nodeutils report batch entries
+      ansible.builtin.set_fact:
+        nodeutils_report_entries: >-
+          {{
+            (nodeutils_report_entries | default([]))
+            + [
+              {
+                'source': item,
+                'text': hostvars[item].nodeutils_report_slurp.content | b64decode,
+              }
+            ]
+          }}
+      loop: "{{ hostvars.localhost.nodeutils_ingest_hosts | default([]) }}"
+      no_log: true
+
+    - name: Assert nodeutils report batch is not empty
+      ansible.builtin.assert:
+        that:
+          - nodeutils_report_entries is defined
+          - nodeutils_report_entries | length > 0
+        fail_msg: "No nodeutils reports were collected for Nautobot ingest."
+
+    - name: Build nodeutils report batch payload
+      ansible.builtin.set_fact:
+        nodeutils_report_batch:
+          reports: "{{ nodeutils_report_entries }}"
+      no_log: true
 
     - name: Look up Nautobot ingest job
       ansible.builtin.uri:
@@ -148,8 +137,7 @@
           {{
             {
               'data': {
-                'report_path': nautobot_nodeutils_report_dir,
-                'report_text': '',
+                'report_batch': nodeutils_report_batch | to_json,
                 'policy_file': nautobot_ingest_policy_file,
                 'dry_run': nautobot_ingest_dry_run | bool,
                 'max_report_age_hours': nautobot_ingest_max_report_age_hours | int,
@@ -173,5 +161,6 @@
           job_name: "{{ nautobot_ingest_job.name }}"
           job_id: "{{ nautobot_ingest_job.id }}"
           dry_run: "{{ nautobot_ingest_dry_run | bool }}"
+          report_count: "{{ nodeutils_report_entries | length }}"
           response_status: "{{ nautobot_ingest_run.status }}"
           response_location: "{{ nautobot_ingest_run.location | default('') }}"
