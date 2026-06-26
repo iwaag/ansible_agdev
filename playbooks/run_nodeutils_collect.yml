@@ -55,6 +55,7 @@
         dest: "{{ nodeutils_checkout_dir }}"
         version: "{{ nodeutils_version }}"
         update: true
+        force: true
       become: true
       become_user: "{{ nodeutils_user }}"
       environment:
