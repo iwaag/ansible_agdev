@@ -147,22 +147,6 @@ ansible-playbook playbooks/collect_nodeutils_and_ingest_nautobot.yml \
   -e nautobot_ingest_dry_run=true
 ```
 
-Install Nautobot Ansible dynamic inventory support on the control node:
-
-```bash
-ansible-playbook playbooks/setup_nautobot_ansible_inventory.yml
-```
-
-Pin or upgrade the collection if needed:
-
-```bash
-ansible-playbook playbooks/setup_nautobot_ansible_inventory.yml \
-  -e nautobot_ansible_collection_version='==5.16.2'
-
-ansible-playbook playbooks/setup_nautobot_ansible_inventory.yml \
-  -e nautobot_ansible_collection_upgrade=true
-```
-
 Clone a Git repository and run a one-line command inside it:
 
 ```bash
@@ -241,7 +225,6 @@ The generated file defines `command_line` switches, so the entities should appea
 - The two export playbooks share `playbooks/tasks/nautobot_run_job.yml` and `playbooks/tasks/nautobot_download_file.yml` for JobResult polling and FileProxy download instead of duplicating that transport code. `make pipeline` runs the full refresh: `bootstrap-inventory`, `collect-ingest`, then `production-inventory`.
 - `run_nodeutils_collect.yml` targets `ssh_hosts` by default, installs Git on Linux hosts, installs uv on Linux/macOS, clones `nodeutils_repo` into `nodeutils_checkout_dir` (`/opt/nodeutils` by default), forcibly refreshes that checkout, runs `uv sync --frozen`, and writes `nodeutils_output_path` (`/var/lib/nodeutils/inventory.json` by default). Override `nodeutils_repo`, `nodeutils_version`, `nodeutils_checkout_dir`, or `nodeutils_collect_args` when needed.
 - `collect_nodeutils_and_ingest_nautobot.yml` targets `ssh_hosts` by default, runs `run_nodeutils_collect.yml`, reads each host's `nodeutils_output_path` (`/var/lib/nodeutils/inventory.json` by default), builds one API batch, and runs the Nautobot `Ingest Nodeutils Inventory` Job. It does not copy reports to the Nautobot server or depend on Nautobot container filesystem paths. It defaults to `nautobot_ingest_dry_run=false`, so successful Ansible runs apply Nautobot Device changes. For production rollouts, policy changes, or first-time validation, set `-e nautobot_ingest_dry_run=true` to preview Job logs without committing. Nautobot connection defaults are centralized in `vars/nautobot.yml`; set `nautobot_url` and `nautobot_token` through extra vars, `NAUTOBOT_URL`/`NAUTOBOT_TOKEN`, or Vault.
-- `setup_nautobot_ansible_inventory.yml` installs the `networktocode.nautobot` collection and `pynautobot>=2.0.0` on the Ansible control node for the Nautobot dynamic inventory plugin. The collection is pinned to `==5.16.2` by default because `networktocode.nautobot` 6.x requires ansible-core 2.18 or newer. Override `nautobot_ansible_collection_version` to pin a different collection version, `nautobot_ansible_collection_upgrade=true` to upgrade, or `nautobot_ansible_pip_extra_args` if the control node's Python packaging policy requires different pip flags.
 - `clone_git_and_run.yml` clones or updates `git_clone_run_repo` into `git_clone_run_dest` (`/tmp/ansible-git-clone-run` by default) and runs `git_clone_run_command` from that directory. Override `git_clone_run_version` to pin a branch, tag, or commit.
 - `wake_hosts.yml` targets `macos:&power_managed` and schedules `pmset` wake two seconds ahead on the selected host.
 - `wake_linux_hosts.yml` uses each selected Linux host's `mac_address` and sends to `255.255.255.255:9`.

@@ -132,7 +132,3 @@ You can switch the route for a run like this:
 ```bash
 ansible-playbook playbooks/configure_suspend_sudo.yml --limit <host_or_group> -e connection_path=tailscale
 ```
-
-The old handwritten `inventories/production/hosts.yml` and broad
-`inventories/hosts.example.yml` have been removed; the generated production
-inventory is the only production inventory.
