@@ -12,11 +12,12 @@
     nintent_hosts_intent_include_skipped: true
     nintent_hosts_intent_local_dir: "{{ playbook_dir }}/../inventories/generated"
     nintent_hosts_intent_local_file: "{{ nintent_hosts_intent_local_dir }}/hosts_intent.yml"
+    nintent_hosts_intent_staging_file: "{{ nintent_hosts_intent_local_dir }}/.hosts_intent.yml.staging"
     nintent_hosts_intent_export_filename: hosts_intent.yml
     nintent_hosts_intent_export_file_regex: 'hosts_intent(_[A-Za-z0-9]+)?\.yml'
-    nintent_hosts_intent_expected_schema_version: "1.0"
-    nintent_hosts_intent_poll_retries: 30
-    nintent_hosts_intent_poll_delay: 2
+    nintent_hosts_intent_expected_schema_version: "2.0"
+    nautobot_job_poll_retries: 30
+    nautobot_job_poll_delay: 2
 
   tasks:
     - name: Assert Nautobot API settings are provided
@@ -36,230 +37,70 @@
         state: directory
         mode: "0700"
 
-    - name: Look up Nautobot hosts intent export job
-      ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/jobs/?q={{ nintent_hosts_intent_job_name | urlencode }}"
-        method: GET
-        headers:
-          Authorization: "Token {{ nautobot_token }}"
-          Accept: application/json
-        return_content: true
-        validate_certs: "{{ nautobot_validate_certs }}"
-        status_code: 200
-      register: nintent_hosts_intent_job_lookup
-      no_log: true
+    - name: Run the hosts intent export Job
+      ansible.builtin.include_tasks: tasks/nautobot_run_job.yml
+      vars:
+        job_name: "{{ nintent_hosts_intent_job_name }}"
+        job_data:
+          include_skipped: "{{ nintent_hosts_intent_include_skipped | bool }}"
 
-    - name: Select Nautobot hosts intent export job
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_job: >-
-          {{
-            (
-              nintent_hosts_intent_job_lookup.json.results
-              | selectattr('name', 'equalto', nintent_hosts_intent_job_name)
-              | list
-            )[0]
-          }}
-      when: >-
-        (
-          nintent_hosts_intent_job_lookup.json.results
-          | selectattr('name', 'equalto', nintent_hosts_intent_job_name)
-          | list
-          | length
-        ) > 0
-
-    - name: Assert Nautobot hosts intent export job exists
-      ansible.builtin.assert:
-        that:
-          - nintent_hosts_intent_job is defined
-          - nintent_hosts_intent_job.id is defined
-        fail_msg: >-
-          Could not find Nautobot Job named "{{ nintent_hosts_intent_job_name }}".
-          Confirm nintent is installed, jobs are registered, and the Job is enabled.
-
-    - name: Run Nautobot hosts intent export job
-      ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/jobs/{{ nintent_hosts_intent_job.id }}/run/"
-        method: POST
-        headers:
-          Authorization: "Token {{ nautobot_token }}"
-          Accept: application/json
-          Content-Type: application/json
-        body: >-
-          {{
-            {
-              'data': {
-                'include_skipped': nintent_hosts_intent_include_skipped | bool,
-              },
-              'commit': true,
-            } | to_json
-          }}
-        return_content: true
-        validate_certs: "{{ nautobot_validate_certs }}"
-        status_code:
-          - 200
-          - 201
-          - 202
-      register: nintent_hosts_intent_run
-      no_log: true
-
-    - name: Determine Nautobot hosts intent export JobResult id
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_job_result_url: >-
-          {{
-            nintent_hosts_intent_run.location
-            | default(nintent_hosts_intent_run.json.job_result.url | default(nintent_hosts_intent_run.json.result.url | default(nintent_hosts_intent_run.json.url | default(''))))
-          }}
-        nintent_hosts_intent_job_result_id_from_body: >-
-          {{
-            nintent_hosts_intent_run.json.job_result.id
-            | default(nintent_hosts_intent_run.json.job_result.pk | default(nintent_hosts_intent_run.json.result.id | default(nintent_hosts_intent_run.json.job_result | default(nintent_hosts_intent_run.json.id | default('')))))
-          }}
-
-    - name: Determine Nautobot hosts intent export JobResult id from URL
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_job_result_id_from_url: >-
-          {{
-            nintent_hosts_intent_job_result_url
-            | regex_replace('^.*/api/extras/job-results/([^/]+)/?.*$', '\1')
-          }}
-      when: nintent_hosts_intent_job_result_url is search('/api/extras/job-results/')
-
-    - name: Set Nautobot hosts intent export JobResult id
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_job_result_id: >-
-          {{
-            nintent_hosts_intent_job_result_id_from_body
-            if nintent_hosts_intent_job_result_id_from_body | length > 0
-            else nintent_hosts_intent_job_result_id_from_url | default('')
-          }}
-
-    - name: Assert Nautobot hosts intent export JobResult id was found
-      ansible.builtin.assert:
-        that:
-          - nintent_hosts_intent_job_result_id | length > 0
-        fail_msg: >-
-          Could not determine JobResult id from Nautobot Job run response.
-
-    - name: Normalize Nautobot hosts intent export JobResult id
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_job_result_id: >-
-          {{
-            nintent_hosts_intent_job_result_id
-            | regex_replace('^.*/api/extras/job-results/([^/]+)/?.*$', '\1')
-          }}
-      when: nintent_hosts_intent_job_result_id is search('/api/extras/job-results/')
-
-    - name: Wait for Nautobot hosts intent export job to finish
-      ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/job-results/{{ nintent_hosts_intent_job_result_id }}/"
-        method: GET
-        headers:
-          Authorization: "Token {{ nautobot_token }}"
-          Accept: application/json
-        return_content: true
-        validate_certs: "{{ nautobot_validate_certs }}"
-        status_code: 200
-      register: nintent_hosts_intent_job_result
-      until: >-
-        (
-          nintent_hosts_intent_job_result.json.status.value | default(nintent_hosts_intent_job_result.json.status) | string | lower
-        ) in ['completed', 'success', 'successful', 'failed', 'failure', 'errored', 'error', 'revoked', 'canceled', 'cancelled']
-      retries: "{{ nintent_hosts_intent_poll_retries }}"
-      delay: "{{ nintent_hosts_intent_poll_delay }}"
-      no_log: true
-
-    - name: Assert Nautobot hosts intent export job succeeded
-      ansible.builtin.assert:
-        that:
-          - >-
-            (
-              nintent_hosts_intent_job_result.json.status.value | default(nintent_hosts_intent_job_result.json.status) | string | lower
-            ) in ['completed', 'success', 'successful']
-        fail_msg: >-
-          Nautobot Job "{{ nintent_hosts_intent_job_name }}" did not succeed.
-
-    - name: Look up Nautobot hosts intent export file proxy
-      ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/?job_result_id={{ nintent_hosts_intent_job_result_id | urlencode }}&name={{ nintent_hosts_intent_export_filename | urlencode }}"
-        method: GET
-        headers:
-          Authorization: "Token {{ nautobot_token }}"
-          Accept: application/json
-        return_content: true
-        validate_certs: "{{ nautobot_validate_certs }}"
-        status_code: 200
-      register: nintent_hosts_intent_file_proxy_lookup
-      no_log: true
-
-    - name: Select Nautobot hosts intent export file proxy
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_file_proxy: "{{ item }}"
-      loop: "{{ nintent_hosts_intent_file_proxy_lookup.json.results | default([]) }}"
-      when:
-        - nintent_hosts_intent_file_proxy is not defined
-        - item | to_json is search(nintent_hosts_intent_job_result_id)
-        - item | to_json is search(nintent_hosts_intent_export_file_regex)
-      no_log: true
-
-    - name: Assert Nautobot hosts intent export file proxy exists
-      ansible.builtin.assert:
-        that:
-          - nintent_hosts_intent_file_proxy is defined
-          - nintent_hosts_intent_file_proxy.id is defined or nintent_hosts_intent_file_proxy.pk is defined
-        fail_msg: >-
-          Could not find JobResult file matching "{{ nintent_hosts_intent_export_filename }}"
-          for JobResult "{{ nintent_hosts_intent_job_result_id }}".
-          Confirm the Nautobot token can view extras file proxies and the file proxy
-          appears in /api/extras/file-proxies/.
-
-    - name: Set Nautobot hosts intent export file proxy id
-      ansible.builtin.set_fact:
-        nintent_hosts_intent_file_proxy_id: "{{ nintent_hosts_intent_file_proxy.id | default(nintent_hosts_intent_file_proxy.pk) }}"
-
-    - name: Download Nautobot hosts intent inventory
-      ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/{{ nintent_hosts_intent_file_proxy_id }}/download/"
-        method: GET
-        headers:
-          Authorization: "Token {{ nautobot_token }}"
-          Accept: "*/*"
-        return_content: true
-        validate_certs: "{{ nautobot_validate_certs }}"
-        status_code: 200
-      register: nintent_hosts_intent_inventory
-      no_log: true
+    - name: Download the hosts intent inventory artifact
+      ansible.builtin.include_tasks: tasks/nautobot_download_file.yml
+      vars:
+        download_job_result_id: "{{ nautobot_job_result_id }}"
+        download_filename: "{{ nintent_hosts_intent_export_filename }}"
+        download_file_regex: "{{ nintent_hosts_intent_export_file_regex }}"
 
     - name: Assert Nautobot hosts intent export schema is supported
       ansible.builtin.assert:
         that:
           - >-
-            nintent_hosts_intent_inventory.content
+            nautobot_download_content
             is search('# schema_version: ' ~ nintent_hosts_intent_expected_schema_version)
         fail_msg: >-
           The downloaded nintent hosts intent export is not schema
           {{ nintent_hosts_intent_expected_schema_version }}.
 
-    - name: Write local nintent hosts intent inventory
-      ansible.builtin.copy:
-        content: "{{ nintent_hosts_intent_inventory.content }}"
-        dest: "{{ nintent_hosts_intent_local_file }}"
-        mode: "0600"
+    - name: Install validated nintent hosts intent inventory atomically
+      block:
+        - name: Write staged nintent hosts intent inventory
+          ansible.builtin.copy:
+            content: "{{ nautobot_download_content }}"
+            dest: "{{ nintent_hosts_intent_staging_file }}"
+            mode: "0600"
 
-    - name: Validate local nintent hosts intent inventory
-      ansible.builtin.command:
-        argv:
-          - ansible-inventory
-          - -i
-          - "{{ nintent_hosts_intent_local_file }}"
-          - --list
-      changed_when: false
+        - name: Validate staged nintent hosts intent inventory
+          ansible.builtin.command:
+            argv:
+              - ansible-inventory
+              - -i
+              - "{{ nintent_hosts_intent_staging_file }}"
+              - --list
+          changed_when: false
+
+        - name: Atomically replace local nintent hosts intent inventory
+          ansible.builtin.command:
+            argv:
+              - mv
+              - "{{ nintent_hosts_intent_staging_file }}"
+              - "{{ nintent_hosts_intent_local_file }}"
+          changed_when: true
+      rescue:
+        - name: Remove unvalidated staged nintent hosts intent inventory
+          ansible.builtin.file:
+            path: "{{ nintent_hosts_intent_staging_file }}"
+            state: absent
+
+        - name: Fail because the downloaded inventory was not installed
+          ansible.builtin.fail:
+            msg: >-
+              The downloaded nintent hosts intent inventory failed validation and was
+              not installed. The previous {{ nintent_hosts_intent_local_file }} is unchanged.
 
     - name: Show nintent hosts intent export result
       ansible.builtin.debug:
         msg:
-          job_name: "{{ nintent_hosts_intent_job.name }}"
-          job_id: "{{ nintent_hosts_intent_job.id }}"
-          job_result_id: "{{ nintent_hosts_intent_job_result_id }}"
-          file_proxy_id: "{{ nintent_hosts_intent_file_proxy_id }}"
+          job_name: "{{ nintent_hosts_intent_job_name }}"
+          job_result_id: "{{ nautobot_job_result_id }}"
           schema_version: "{{ nintent_hosts_intent_expected_schema_version }}"
           local_inventory: "{{ nintent_hosts_intent_local_file }}"
