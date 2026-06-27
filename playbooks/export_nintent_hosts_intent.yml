@@ -180,7 +180,7 @@
 
     - name: Look up Nautobot hosts intent export file proxy
       ansible.builtin.uri:
-        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/"
+        url: "{{ nautobot_url | regex_replace('/+$', '') }}/api/extras/file-proxies/?job_result_id={{ nintent_hosts_intent_job_result_id | urlencode }}&name={{ nintent_hosts_intent_export_filename | urlencode }}"
         method: GET
         headers:
           Authorization: "Token {{ nautobot_token }}"
