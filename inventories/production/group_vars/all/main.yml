@@ -10,6 +10,7 @@ ansible_host: >-
     if connection_path == 'tailscale'
     else local_connection_host
   }}
+ansible_user: "{{ default_user }}"
 default_user: "{{ vault_default_user }}"
 ansible_become_password: "{{ vault_ansible_become_password }}"
 nautobot_url: >-

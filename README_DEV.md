@@ -1,5 +1,21 @@
 # Developer Notes
 
+## Production inventory contract
+
+The service-placement cutover contract is documented in
+`docs/production_inventory_contract.md`. The Ansible-owned mapping is
+`vars/deployment_profiles.yml`; it must contain no secrets.
+
+Verify Ansible's canonical JSON bytes and the current map before changing a
+profile:
+
+```bash
+ansible-playbook playbooks/verify_deployment_profiles_contract.yml
+```
+
+Profile changes are breaking contract changes during the current cutover. Keep
+the nintent contract fixtures and the audited role/default table in sync.
+
 ## Adding A Prometheus Exporter
 
 This repository is set up so exporter installation and Prometheus target registration stay loosely coupled.

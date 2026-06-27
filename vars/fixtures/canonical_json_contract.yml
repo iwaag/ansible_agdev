@@ -1,0 +1,9 @@
+---
+canonical_json_contract_value:
+  z:
+    - true
+    - 日本語
+  a:
+    n: 3
+canonical_json_contract_expected: '{"a":{"n":3},"z":[true,"日本語"]}'
+canonical_json_contract_sha256: f4c40738eb9ba76b01b31f0b2853b9cca57305e2bf2493a86771d7b8fc6ed3c9

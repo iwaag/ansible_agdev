@@ -1,0 +1,135 @@
+---
+# Ansible-owned production inventory projection contract.
+# This file must not contain secrets. Profile and config keys are lowercase
+# slugs; config schema 1 accepts only the explicitly declared JSON types.
+deployment_profiles:
+  dnsmasq:
+    group: dnsmasq_server
+    config_schema_version: "1"
+    variables:
+      bind_interfaces:
+        ansible_variable: dnsmasq_bind_interfaces
+        type: boolean
+        required: false
+      cache_size:
+        ansible_variable: dnsmasq_cache_size
+        type: integer
+        required: false
+      dhcp_authoritative:
+        ansible_variable: dnsmasq_dhcp_authoritative
+        type: boolean
+        required: false
+      enable_dhcp:
+        ansible_variable: dnsmasq_enable_dhcp
+        type: boolean
+        required: false
+      interfaces:
+        ansible_variable: dnsmasq_interfaces
+        type: list
+        items: string
+        required: false
+      listen_addresses:
+        ansible_variable: dnsmasq_listen_addresses
+        type: list
+        items: string
+        required: false
+      local_domain:
+        ansible_variable: dnsmasq_local_domain
+        type: string
+        required: false
+      upstream_servers:
+        ansible_variable: dnsmasq_upstream_servers
+        type: list
+        items: string
+        required: false
+
+  grafana:
+    group: grafana_server
+    config_schema_version: "1"
+    variables:
+      datasource_is_default:
+        ansible_variable: grafana_datasource_is_default
+        type: boolean
+        required: false
+      datasource_name:
+        ansible_variable: grafana_datasource_name
+        type: string
+        required: false
+      datasource_provisioning_enabled:
+        ansible_variable: grafana_datasource_provisioning_enabled
+        type: boolean
+        required: false
+      prometheus_port:
+        ansible_variable: grafana_prometheus_port
+        type: integer
+        required: false
+      prometheus_scheme:
+        ansible_variable: grafana_prometheus_scheme
+        type: string
+        required: false
+
+  home_assistant:
+    group: haos_server
+    config_schema_version: "1"
+    variables: {}
+
+  nomad_client:
+    group: nomad_client
+    config_schema_version: "1"
+    variables:
+      datacenter:
+        ansible_variable: nomad_datacenter
+        type: string
+        required: false
+      node_class:
+        ansible_variable: nomad_client_node_class
+        type: string
+        required: false
+      raw_exec_enabled:
+        ansible_variable: nomad_raw_exec_enabled
+        type: boolean
+        required: false
+      region:
+        ansible_variable: nomad_region
+        type: string
+        required: false
+
+  nomad_server:
+    group: nomad_server
+    config_schema_version: "1"
+    variables:
+      bootstrap_expect:
+        ansible_variable: nomad_bootstrap_expect
+        type: integer
+        required: false
+      datacenter:
+        ansible_variable: nomad_datacenter
+        type: string
+        required: false
+      region:
+        ansible_variable: nomad_region
+        type: string
+        required: false
+      retry_join:
+        ansible_variable: nomad_server_retry_join
+        type: list
+        items: string
+        required: false
+
+  prometheus:
+    group: prometheus_server
+    config_schema_version: "1"
+    variables:
+      listen_address:
+        ansible_variable: prometheus_listen_address
+        type: string
+        required: false
+      retention_time:
+        ansible_variable: prometheus_retention_time
+        type: string
+        required: false
+
+  prometheus_node_exporter:
+    group: prometheus_node_exporter_targets
+    config_schema_version: "1"
+    variables: {}

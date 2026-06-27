@@ -1,0 +1,49 @@
+---
+- name: Verify deployment profile canonical JSON contract
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars_files:
+    - ../vars/fixtures/canonical_json_contract.yml
+    - ../vars/deployment_profiles.yml
+  tasks:
+    - name: Serialize the cross-language contract fixture
+      ansible.builtin.set_fact:
+        canonical_json_contract_actual: >-
+          {{
+            canonical_json_contract_value
+            | to_json(
+                sort_keys=true,
+                separators=[',', ':'],
+                ensure_ascii=false,
+                allow_nan=false
+              )
+          }}
+
+    - name: Assert exact UTF-8 JSON bytes and SHA-256 digest
+      ansible.builtin.assert:
+        that:
+          - canonical_json_contract_actual == canonical_json_contract_expected
+          - (canonical_json_contract_actual | hash('sha256')) == canonical_json_contract_sha256
+        fail_msg: Ansible canonical JSON does not match the production Job-input contract.
+
+    - name: Serialize the audited deployment profiles
+      ansible.builtin.set_fact:
+        deployment_profiles_canonical_json: >-
+          {{
+            deployment_profiles
+            | to_json(
+                sort_keys=true,
+                separators=[',', ':'],
+                ensure_ascii=false,
+                allow_nan=false
+              )
+          }}
+
+    - name: Assert deployment profile payload is non-empty and deterministic
+      ansible.builtin.assert:
+        that:
+          - deployment_profiles is mapping
+          - deployment_profiles | length > 0
+          - deployment_profiles_canonical_json == (deployment_profiles_canonical_json | from_json | to_json(sort_keys=true, separators=[',', ':'], ensure_ascii=false, allow_nan=false))
+          - (deployment_profiles_canonical_json | hash('sha256')) | length == 64
