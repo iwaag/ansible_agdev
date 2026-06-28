@@ -41,24 +41,8 @@
         - "{{ nintent_production_local_dir }}"
         - "{{ nintent_production_reports_dir }}"
 
-    - name: Serialize the audited deployment profiles to canonical JSON
-      ansible.builtin.set_fact:
-        nintent_deployment_profiles_json: >-
-          {{
-            deployment_profiles
-            | to_json(sort_keys=true, separators=[',', ':'], ensure_ascii=false, allow_nan=false)
-          }}
-
-    - name: Assert deployment profiles are a non-empty mapping
-      ansible.builtin.assert:
-        that:
-          - deployment_profiles is mapping
-          - deployment_profiles | length > 0
-        fail_msg: vars/deployment_profiles.yml must define a non-empty deployment_profiles mapping.
-
-    - name: Compute the deployment profile SHA-256 digest
-      ansible.builtin.set_fact:
-        nintent_deployment_profiles_digest: "{{ nintent_deployment_profiles_json | hash('sha256') }}"
+    - name: Serialize and digest the audited deployment profiles
+      ansible.builtin.include_tasks: tasks/nintent_serialize_deployment_profiles.yml
 
     - name: Run the production inventory export Job
       ansible.builtin.include_tasks: tasks/nautobot_run_job.yml
