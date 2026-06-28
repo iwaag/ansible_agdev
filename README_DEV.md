@@ -16,6 +16,17 @@ ansible-playbook playbooks/verify_deployment_profiles_contract.yml
 Profile changes are breaking contract changes during the current cutover. Keep
 the nintent contract fixtures and the audited role/default table in sync.
 
+After editing `vars/deployment_profiles.yml`, push the map into nintent's
+read-only projection so the Quick Service Placement UI sees the new profiles and
+config schemas. It uses the same canonical JSON + digest contract as the export:
+
+```bash
+ansible-playbook playbooks/sync_nintent_deployment_profiles.yml
+```
+
+Ansible stays the authoritative owner; the projection is advisory, and production
+export still revalidates the map at export time.
+
 ## Adding A Prometheus Exporter
 
 This repository is set up so exporter installation and Prometheus target registration stay loosely coupled.

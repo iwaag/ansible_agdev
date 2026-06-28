@@ -86,8 +86,11 @@ not placement configuration.
 
 ## Profile Job-input bytes
 
-The export playbook passes only the value below `deployment_profiles`, not the
-YAML wrapper. Canonical JSON is exactly Python:
+The export playbook (`export_nintent_production.yml`) and the projection sync
+playbook (`sync_nintent_deployment_profiles.yml`) both pass only the value below
+`deployment_profiles`, not the YAML wrapper, through the shared
+`playbooks/tasks/nintent_serialize_deployment_profiles.yml`. Canonical JSON is
+exactly Python:
 
 ```python
 json.dumps(
