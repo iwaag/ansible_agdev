@@ -13,3 +13,4 @@ inventories/generated/group_vars/all/*
 !inventories/generated/group_vars/all/main.yml
 !inventories/generated/group_vars/all/vault.example.yml
 .env
+.DS_Store
