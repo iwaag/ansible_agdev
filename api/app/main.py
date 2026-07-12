@@ -15,13 +15,13 @@ TOKEN_ENV_NAME: Final[str] = "WEBHOOK_TOKEN"
 SAFE_VALUE_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_.:-]+$")
 
 PLAYBOOKS: Final[dict[str, str]] = {
-    "configure_suspend_linux": "playbooks/configure_suspend_sudo.yml",
-    "suspend_linux": "playbooks/suspend_hosts.yml",
-    "configure_suspend_macos": "playbooks/configure_suspend_mac.yml",
-    "sleep_macos": "playbooks/sleep_macos_hosts.yml",
-    "enable_wol_linux": "playbooks/enable_wake_on_lan.yml",
-    "wake_linux": "playbooks/wake_linux_hosts.yml",
-    "wake_macos": "playbooks/wake_hosts.yml",
+    "configure_suspend_linux": "playbooks/power/configure_suspend_sudo.yml",
+    "suspend_linux": "playbooks/power/suspend_hosts.yml",
+    "configure_suspend_macos": "playbooks/power/configure_suspend_mac.yml",
+    "sleep_macos": "playbooks/power/sleep_macos_hosts.yml",
+    "enable_wol_linux": "playbooks/power/enable_wake_on_lan.yml",
+    "wake_linux": "playbooks/power/wake_linux_hosts.yml",
+    "wake_macos": "playbooks/power/wake_hosts.yml",
 }
 
 RUN_LOCK = asyncio.Lock()

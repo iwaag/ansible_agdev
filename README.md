@@ -10,7 +10,7 @@ Export the nintent mDNS bootstrap inventory from Nautobot:
 ```bash
 NAUTOBOT_URL=https://nautobot.example.local \
 NAUTOBOT_TOKEN=your-nautobot-api-token \
-ansible-playbook playbooks/export_nintent_hosts_intent.yml
+ansible-playbook playbooks/nautobot/export_nintent_hosts_intent.yml
 ```
 
 The generated bootstrap inventory is written to:
@@ -29,91 +29,91 @@ before using operational commands on a fresh checkout.
 Allow the default user to suspend a host without a sudo password:
 
 ```bash
-ansible-playbook playbooks/configure_suspend_sudo.yml --limit <host_or_group>
+ansible-playbook playbooks/power/configure_suspend_sudo.yml --limit <host_or_group>
 ```
 
 Suspend Linux hosts immediately:
 
 ```bash
-ansible-playbook playbooks/suspend_hosts.yml --limit <host_or_group>
+ansible-playbook playbooks/power/suspend_hosts.yml --limit <host_or_group>
 ```
 
 Allow the default user to put a macOS host to sleep without a sudo password:
 
 ```bash
-ansible-playbook playbooks/configure_suspend_mac.yml --limit <host_or_group>
+ansible-playbook playbooks/power/configure_suspend_mac.yml --limit <host_or_group>
 ```
 
 Put macOS hosts to sleep immediately:
 
 ```bash
-ansible-playbook playbooks/sleep_macos_hosts.yml --limit <host_or_group>
+ansible-playbook playbooks/power/sleep_macos_hosts.yml --limit <host_or_group>
 ```
 
 Enable Wake-on-LAN on Linux targets:
 
 ```bash
-ansible-playbook playbooks/enable_wake_on_lan.yml --limit <host_or_group>
+ansible-playbook playbooks/power/enable_wake_on_lan.yml --limit <host_or_group>
 ```
 
 Apply the Linux worker baseline setup:
 
 ```bash
-ansible-playbook playbooks/linux_initial_setup.yml --limit <host_or_group>
+ansible-playbook playbooks/bootstrap/linux_initial_setup.yml --limit <host_or_group>
 ```
 
 Install Prometheus from the upstream release archive:
 
 ```bash
-ansible-playbook playbooks/setup_prometheus.yml --limit <host_or_group>
+ansible-playbook playbooks/monitoring/setup_prometheus.yml --limit <host_or_group>
 ```
 
 Install node exporter on selected hosts and refresh Prometheus targets:
 
 ```bash
-ansible-playbook playbooks/setup_node_exporter.yml --limit <host_or_group_or_group_union>
+ansible-playbook playbooks/monitoring/setup_node_exporter.yml --limit <host_or_group_or_group_union>
 ```
 
 Install Grafana and provision the Prometheus data source:
 
 ```bash
-ansible-playbook playbooks/setup_grafana.yml --limit <host_or_group>
+ansible-playbook playbooks/monitoring/setup_grafana.yml --limit <host_or_group>
 ```
 
 Install and configure a Nomad server on Ubuntu:
 
 ```bash
-ansible-playbook playbooks/setup_nomad_server.yml --limit <host_or_group>
+ansible-playbook playbooks/nomad/setup_nomad_server.yml --limit <host_or_group>
 ```
 
 Install and configure a Nomad client on Ubuntu:
 
 ```bash
-ansible-playbook playbooks/setup_nomad_client.yml --limit <host_or_group>
+ansible-playbook playbooks/nomad/setup_nomad_client.yml --limit <host_or_group>
 ```
 
 Install and configure a Nomad client on macOS (`raw_exec` only):
 
 ```bash
-ansible-playbook playbooks/setup_nomad_client_macos.yml --limit <host_or_group>
+ansible-playbook playbooks/nomad/setup_nomad_client_macos.yml --limit <host_or_group>
 ```
 
 Install uv on Linux and macOS hosts:
 
 ```bash
-ansible-playbook playbooks/setup_uv.yml --limit <host_or_group>
+ansible-playbook playbooks/bootstrap/setup_uv.yml --limit <host_or_group>
 ```
 
 Install Git on Linux hosts:
 
 ```bash
-ansible-playbook playbooks/setup_git.yml --limit <host_or_group>
+ansible-playbook playbooks/bootstrap/setup_git.yml --limit <host_or_group>
 ```
 
 Install and configure dnsmasq on Linux hosts:
 
 ```bash
-ansible-playbook playbooks/setup_dnsmasq.yml --limit <host_or_group>
+ansible-playbook playbooks/bootstrap/setup_dnsmasq.yml --limit <host_or_group>
 ```
 
 Export nintent dnsmasq records and DHCP ranges from Nautobot and deploy them to dnsmasq servers:
@@ -121,13 +121,13 @@ Export nintent dnsmasq records and DHCP ranges from Nautobot and deploy them to 
 ```bash
 NAUTOBOT_URL=https://nautobot.example.local \
 NAUTOBOT_TOKEN=your-nautobot-api-token \
-ansible-playbook playbooks/deploy_nintent_dnsmasq_records.yml
+ansible-playbook playbooks/nautobot/deploy_nintent_dnsmasq_records.yml
 ```
 
 Clone nodeutils on each selected host and write a local inventory report:
 
 ```bash
-ansible-playbook playbooks/run_nodeutils_collect.yml --limit <host_or_group>
+ansible-playbook playbooks/nautobot/run_nodeutils_collect.yml --limit <host_or_group>
 ```
 
 Collect nodeutils reports and submit one batch to the Nautobot ingest Job by API:
@@ -135,7 +135,7 @@ Collect nodeutils reports and submit one batch to the Nautobot ingest Job by API
 ```bash
 NAUTOBOT_URL=https://nautobot.example.local \
 NAUTOBOT_TOKEN=your-nautobot-api-token \
-ansible-playbook playbooks/collect_nodeutils_and_ingest_nautobot.yml
+ansible-playbook playbooks/nautobot/collect_nodeutils_and_ingest_nautobot.yml
 ```
 
 For production rollouts or policy changes, run a preview first:
@@ -143,14 +143,14 @@ For production rollouts or policy changes, run a preview first:
 ```bash
 NAUTOBOT_URL=https://nautobot.example.local \
 NAUTOBOT_TOKEN=your-nautobot-api-token \
-ansible-playbook playbooks/collect_nodeutils_and_ingest_nautobot.yml \
+ansible-playbook playbooks/nautobot/collect_nodeutils_and_ingest_nautobot.yml \
   -e nautobot_ingest_dry_run=true
 ```
 
 Clone a Git repository and run a one-line command inside it:
 
 ```bash
-ansible-playbook playbooks/clone_git_and_run.yml \
+ansible-playbook playbooks/bootstrap/clone_git_and_run.yml \
   -e target_hosts=<host_or_group> \
   -e git_clone_run_repo=https://github.com/example/repo.git \
   -e 'git_clone_run_command=./run.sh'
@@ -159,19 +159,19 @@ ansible-playbook playbooks/clone_git_and_run.yml \
 Schedule a macOS host to wake shortly:
 
 ```bash
-ansible-playbook playbooks/wake_hosts.yml --limit <host_or_group>
+ansible-playbook playbooks/power/wake_hosts.yml --limit <host_or_group>
 ```
 
 Send a Wake-on-LAN magic packet from the control node to Linux targets:
 
 ```bash
-ansible-playbook playbooks/wake_linux_hosts.yml --limit <host_or_group>
+ansible-playbook playbooks/power/wake_linux_hosts.yml --limit <host_or_group>
 ```
 
 Generate Home Assistant `command_line` power switches from inventory:
 
 ```bash
-ansible-playbook playbooks/generate_home_assistant_power_switches.yml \
+ansible-playbook playbooks/power/generate_home_assistant_power_switches.yml \
   -e home_assistant_webhook_base_url=http://YOUR_API_HOST:8000 \
   -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
 ```
@@ -179,7 +179,7 @@ ansible-playbook playbooks/generate_home_assistant_power_switches.yml \
 Generate and deploy the Home Assistant package to `haos_server`:
 
 ```bash
-ansible-playbook playbooks/deploy_home_assistant_power_switches.yml \
+ansible-playbook playbooks/power/deploy_home_assistant_power_switches.yml \
   -e home_assistant_webhook_base_url=http://YOUR_API_HOST:8000 \
   -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
 ```

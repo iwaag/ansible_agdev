@@ -26,10 +26,10 @@
           extra vars, or Ansible Vault.
 
     - name: Serialize and digest the audited deployment profiles
-      ansible.builtin.include_tasks: tasks/nintent_serialize_deployment_profiles.yml
+      ansible.builtin.include_tasks: ../tasks/nintent_serialize_deployment_profiles.yml
 
     - name: Run the deployment profiles sync Job
-      ansible.builtin.include_tasks: tasks/nautobot_run_job.yml
+      ansible.builtin.include_tasks: ../tasks/nautobot_run_job.yml
       vars:
         job_name: "{{ nintent_sync_profiles_job_name }}"
         job_data:

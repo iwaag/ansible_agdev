@@ -10,7 +10,7 @@ Verify Ansible's canonical JSON bytes and the current map before changing a
 profile:
 
 ```bash
-ansible-playbook playbooks/verify_deployment_profiles_contract.yml
+ansible-playbook playbooks/nautobot/verify_deployment_profiles_contract.yml
 ```
 
 Profile changes are breaking contract changes during the current cutover. Keep
@@ -21,7 +21,7 @@ read-only projection so the Quick Service Placement UI sees the new profiles and
 config schemas. It uses the same canonical JSON + digest contract as the export:
 
 ```bash
-ansible-playbook playbooks/sync_nintent_deployment_profiles.yml
+ansible-playbook playbooks/nautobot/sync_nintent_deployment_profiles.yml
 ```
 
 Ansible stays the authoritative owner; the projection is advisory, and production
@@ -41,7 +41,7 @@ Use this pattern when adding a new exporter:
 Current example:
 
 - `roles/prometheus_node_exporter/` installs `prometheus-node-exporter`
-- `playbooks/setup_node_exporter.yml` applies that role
+- `playbooks/monitoring/setup_node_exporter.yml` applies that role
 - `prometheus_node_exporter_targets` defines which hosts expose port `9100`
 - `roles/prometheus_server/defaults/main.yml` maps that group to the `node_exporter` scrape job
 
@@ -60,7 +60,7 @@ This makes it easy to add more exporters later without rewriting the Prometheus 
 If you want to add `process_exporter`, follow the same structure:
 
 1. Add `roles/prometheus_process_exporter/`
-2. Add `playbooks/setup_process_exporter.yml`
+2. Add `playbooks/monitoring/setup_process_exporter.yml`
 3. Add an inventory group such as `prometheus_process_exporter_targets`
 4. Add a Prometheus inventory job like this:
 
@@ -90,13 +90,13 @@ prometheus_inventory_jobs:
 
 ## Operational Notes
 
-- `playbooks/setup_prometheus.yml` installs and configures the Prometheus server.
-- `playbooks/setup_node_exporter.yml` installs node exporter and then refreshes Prometheus configuration on the Prometheus server.
+- `playbooks/monitoring/setup_prometheus.yml` installs and configures the Prometheus server.
+- `playbooks/monitoring/setup_node_exporter.yml` installs node exporter and then refreshes Prometheus configuration on the Prometheus server.
 - When using `--limit`, make sure the Prometheus server is still included if you expect scrape targets to be refreshed.
 
 ## nintent dnsmasq Consumption
 
-`playbooks/deploy_nintent_dnsmasq_records.yml` consumes nintent dnsmasq export schema `3.0`.
+`playbooks/nautobot/deploy_nintent_dnsmasq_records.yml` consumes nintent dnsmasq export schema `3.0`.
 The deployed `/etc/dnsmasq.d/nintent-records.conf` is intentionally a single generated
 artifact that can contain DNS records, DHCP reservations, and DHCP ranges.
 

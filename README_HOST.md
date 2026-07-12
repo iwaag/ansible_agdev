@@ -1,6 +1,6 @@
 # Host Setup Verification Guide
 
-Use this checklist on each host after applying `playbooks/linux_initial_setup.yml`.
+Use this checklist on each host after applying `playbooks/bootstrap/linux_initial_setup.yml`.
 
 ## Linux
 

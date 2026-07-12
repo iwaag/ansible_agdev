@@ -105,7 +105,7 @@ json.dumps(
 It is UTF-8 with no BOM and no trailing newline. Every mapping key must be a
 string. The digest is lowercase SHA-256 of those exact bytes. The Job parses
 the JSON, serializes it again, requires exact string equality, and then checks
-the supplied digest. `playbooks/verify_deployment_profiles_contract.yml`
+the supplied digest. `playbooks/nautobot/verify_deployment_profiles_contract.yml`
 proves Ansible produces the same fixture bytes and digest as Python.
 
 ## Qualified YAML references

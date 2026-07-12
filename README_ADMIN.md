@@ -130,5 +130,5 @@ from `connection_path`:
 You can switch the route for a run like this:
 
 ```bash
-ansible-playbook playbooks/configure_suspend_sudo.yml --limit <host_or_group> -e connection_path=tailscale
+ansible-playbook playbooks/power/configure_suspend_sudo.yml --limit <host_or_group> -e connection_path=tailscale
 ```
