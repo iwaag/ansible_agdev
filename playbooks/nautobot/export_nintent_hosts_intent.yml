@@ -10,7 +10,7 @@
   vars:
     nintent_hosts_intent_job_name: "Export Ansible Hosts Intent"
     nintent_hosts_intent_include_skipped: true
-    nintent_hosts_intent_local_dir: "{{ playbook_dir }}/../inventories/generated"
+    nintent_hosts_intent_local_dir: "{{ playbook_dir }}/../../inventories/generated"
     nintent_hosts_intent_local_file: "{{ nintent_hosts_intent_local_dir }}/hosts_intent.yml"
     nintent_hosts_intent_staging_file: "{{ nintent_hosts_intent_local_dir }}/.hosts_intent.yml.staging"
     nintent_hosts_intent_export_filename: hosts_intent.yml

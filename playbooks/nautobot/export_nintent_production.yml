@@ -10,7 +10,7 @@
 
   vars:
     nintent_production_job_name: "Export Production Inventory"
-    nintent_production_local_dir: "{{ playbook_dir }}/../inventories/generated"
+    nintent_production_local_dir: "{{ playbook_dir }}/../../inventories/generated"
     nintent_production_local_file: "{{ nintent_production_local_dir }}/production.yml"
     nintent_production_staging_file: "{{ nintent_production_local_dir }}/.production.yml.staging"
     nintent_production_reports_dir: "{{ nintent_production_local_dir }}/production.reports"
