@@ -94,11 +94,14 @@ prometheus_inventory_jobs:
 - `playbooks/monitoring/setup_node_exporter.yml` installs node exporter and then refreshes Prometheus configuration on the Prometheus server.
 - When using `--limit`, make sure the Prometheus server is still included if you expect scrape targets to be refreshed.
 
-## nintent dnsmasq Consumption
+## nctl dnsmasq Consumption
 
-`playbooks/nautobot/deploy_nintent_dnsmasq_records.yml` consumes nintent dnsmasq export schema `3.0`.
-The deployed `/etc/dnsmasq.d/nintent-records.conf` is intentionally a single generated
-artifact that can contain DNS records, DHCP reservations, and DHCP ranges.
+`playbooks/dnsmasq/deploy_dnsmasq_records.yml` consumes a pre-rendered dnsmasq
+configuration supplied through the required absolute-path variable
+`dnsmasq_records_src`. The deployed `/etc/dnsmasq.d/nintent-records.conf` is
+intentionally a single generated artifact that can contain DNS records, DHCP
+reservations, and DHCP ranges. Rendering and Nautobot access belong to `nctl`;
+the playbook only actuates the supplied file.
 
 Keep `/etc/dnsmasq.d/ansible.conf` focused on dnsmasq service settings such as port,
 listen addresses, interfaces, upstream resolvers, and local zones. The direct

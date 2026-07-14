@@ -1,0 +1,75 @@
+---
+- name: Deploy rendered dnsmasq records and ranges to dnsmasq servers
+  hosts: dnsmasq_server
+  become: true
+  gather_facts: false
+
+  vars:
+    dnsmasq_service_name: dnsmasq.service
+    dnsmasq_config_dir: /etc/dnsmasq.d
+    dnsmasq_records_config_file: "{{ dnsmasq_config_dir }}/nintent-records.conf"
+
+  handlers:
+    - name: Restart dnsmasq
+      ansible.builtin.systemd:
+        name: "{{ dnsmasq_service_name }}"
+        state: restarted
+
+  pre_tasks:
+    - name: Assert a rendered dnsmasq configuration path is provided
+      ansible.builtin.assert:
+        that:
+          - dnsmasq_records_src is defined
+          - dnsmasq_records_src | default('') | string | length > 0
+          - dnsmasq_records_src | default('') is match('^/')
+        fail_msg: >-
+          Set dnsmasq_records_src to the absolute controller path of a
+          pre-rendered dnsmasq configuration file.
+      delegate_to: localhost
+      become: false
+
+    - name: Inspect rendered dnsmasq configuration on the controller
+      ansible.builtin.stat:
+        path: "{{ dnsmasq_records_src }}"
+      register: dnsmasq_records_src_stat
+      delegate_to: localhost
+      become: false
+
+    - name: Assert rendered dnsmasq configuration exists
+      ansible.builtin.assert:
+        that:
+          - dnsmasq_records_src_stat.stat.exists
+          - dnsmasq_records_src_stat.stat.isreg
+        fail_msg: >-
+          dnsmasq_records_src does not point to a regular file on the
+          controller: {{ dnsmasq_records_src }}
+      delegate_to: localhost
+      become: false
+
+    - name: Gather target facts
+      ansible.builtin.setup:
+
+    - name: Assert target is Linux
+      ansible.builtin.assert:
+        that:
+          - ansible_system == "Linux"
+        fail_msg: "dnsmasq record deployment supports Linux targets only."
+
+  tasks:
+    - name: Ensure dnsmasq configuration directory exists
+      ansible.builtin.file:
+        path: "{{ dnsmasq_config_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install rendered dnsmasq records and ranges configuration
+      ansible.builtin.copy:
+        src: "{{ dnsmasq_records_src }}"
+        dest: "{{ dnsmasq_records_config_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+        validate: "dnsmasq --test --conf-file=%s"
+      notify: Restart dnsmasq
