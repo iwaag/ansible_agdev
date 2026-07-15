@@ -2,30 +2,12 @@
 
 ## Production inventory contract
 
-The service-placement cutover contract is documented in
-`docs/production_inventory_contract.md`. The Ansible-owned mapping is
-`vars/deployment_profiles.yml`; it must contain no secrets.
-
-Verify Ansible's canonical JSON bytes and the current map before changing a
-profile:
-
-```bash
-ansible-playbook playbooks/nautobot/verify_deployment_profiles_contract.yml
-```
-
-Profile changes are breaking contract changes during the current cutover. Keep
-the nintent contract fixtures and the audited role/default table in sync.
-
-After editing `vars/deployment_profiles.yml`, push the map into nintent's
-read-only projection so the Quick Service Placement UI sees the new profiles and
-config schemas. It uses the same canonical JSON + digest contract as the export:
-
-```bash
-ansible-playbook playbooks/nautobot/sync_nintent_deployment_profiles.yml
-```
-
-Ansible stays the authoritative owner; the projection is advisory, and production
-export still revalidates the map at export time.
+The production inventory contract is documented in
+`docs/production_inventory_contract.md`. The Ansible-owned mapping remains
+`vars/deployment_profiles.yml`; it must contain no secrets. `nctl` reads and
+validates that file directly when running `nctl render production`, so profile
+changes require no serialization, digest handshake, sync Job, or Nautobot
+projection update.
 
 ## Adding A Prometheus Exporter
 

@@ -3,10 +3,11 @@
 # Override the playbook runner or pass extra args, for example:
 #   make pipeline ANSIBLE_PLAYBOOK="ansible-playbook -v"
 ANSIBLE_PLAYBOOK ?= ansible-playbook
+NCTL ?= uv run --project ../nctl nctl
 PLAYBOOKS := playbooks
 BOOTSTRAP_INVENTORY := inventories/generated/hosts_intent.yml
 
-.PHONY: pipeline bootstrap-inventory collect-ingest production-inventory verify-profiles
+.PHONY: pipeline bootstrap-inventory collect-ingest production-inventory
 
 # Full refresh: reach reserved-name nodes with the bootstrap inventory, collect
 # and ingest actual facts, then compose the production inventory from desired
@@ -22,7 +23,4 @@ collect-ingest:
 	$(ANSIBLE_PLAYBOOK) -i $(BOOTSTRAP_INVENTORY) $(PLAYBOOKS)/collect_nodeutils_and_ingest_nautobot.yml
 
 production-inventory:
-	$(ANSIBLE_PLAYBOOK) $(PLAYBOOKS)/export_nintent_production.yml
-
-verify-profiles:
-	$(ANSIBLE_PLAYBOOK) $(PLAYBOOKS)/verify_deployment_profiles_contract.yml
+	$(NCTL) render production --config ../nctl.toml --out inventories/generated
