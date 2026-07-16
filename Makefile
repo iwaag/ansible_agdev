@@ -15,7 +15,7 @@ BOOTSTRAP_INVENTORY := inventories/generated/hosts_intent.yml
 pipeline: bootstrap-inventory collect-ingest production-inventory
 
 bootstrap-inventory:
-	$(ANSIBLE_PLAYBOOK) $(PLAYBOOKS)/export_nintent_hosts_intent.yml
+	$(NCTL) render hosts-intent --config ../nctl.toml --out inventories/generated
 
 # The collection stage runs against the freshly generated bootstrap inventory,
 # not the default production inventory, because production is built afterwards.

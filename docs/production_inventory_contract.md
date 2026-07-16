@@ -16,6 +16,8 @@ NAUTOBOT_TOKEN=... uv run --project nctl nctl render production \
 
 From this directory, `make production-inventory` runs the equivalent command. The full
 `make pipeline` order is bootstrap inventory, nodeutils collect/ingest, then production render.
+The bootstrap stage runs `nctl render hosts-intent --out inventories/generated`; it does not
+run a Nautobot export Job or download a JobResult file through Ansible.
 
 `nctl` reads `vars/deployment_profiles.yml` directly, fetches desired and actual state from
 Nautobot, validates a staged inventory with `ansible-inventory --list`, writes the immutable
@@ -67,9 +69,9 @@ nctl production modules and tests for the executable contract.
 
 ## Operational boundary
 
-The bootstrap `hosts_intent.yml` remains separate and is used for collection before a production
-inventory exists. Operational playbooks use `inventories/generated/production.yml` through
-`ansible.cfg`.
+The bootstrap `hosts_intent.yml` remains separate, is rendered by nctl from desired state, and is
+used for collection before a production inventory exists. Operational playbooks use
+`inventories/generated/production.yml` through `ansible.cfg`.
 
 After changing `vars/deployment_profiles.yml`, rerun `nctl render production`; no profile sync
 step is required. A render failure leaves the previous installed production inventory unchanged.
