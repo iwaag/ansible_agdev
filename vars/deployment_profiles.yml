@@ -133,3 +133,52 @@ deployment_profiles:
     group: prometheus_node_exporter_targets
     config_schema_version: "1"
     variables: {}
+
+# Phase 4 Step 5 (nctl reconcile planner): which profiles have a registered
+# reconciliation action, what kind it is, and their actuation order. This is
+# a separate top-level key from deployment_profiles on purpose -- it must
+# never perturb that key's closed production-inventory contract/digest. A
+# profile absent here, or present with neither `action` nor `observe_only`,
+# is `unsupported`: nctl never invents a playbook for it.
+deployment_profile_reconciliation:
+  dnsmasq:
+    action:
+      kind: dnsmasq_config
+
+  grafana:
+    action:
+      kind: playbook
+      playbook: playbooks/monitoring/setup_grafana.yml
+    dependencies:
+      - prometheus
+
+  home_assistant:
+    # Declared/HAOS nodes are actual-state-exempt (Phase 2 Step 3); nothing
+    # here to actuate from nodeutils-observed drift.
+    observe_only: true
+
+  nomad_client:
+    action:
+      kind: playbook
+      playbook_by_os:
+        linux: playbooks/nomad/setup_nomad_client.yml
+        macos: playbooks/nomad/setup_nomad_client_macos.yml
+    dependencies:
+      - nomad_server
+
+  nomad_server:
+    action:
+      kind: playbook
+      playbook: playbooks/nomad/setup_nomad_server.yml
+
+  prometheus:
+    action:
+      kind: playbook
+      playbook: playbooks/monitoring/setup_prometheus.yml
+
+  prometheus_node_exporter:
+    action:
+      kind: playbook
+      playbook: playbooks/monitoring/setup_node_exporter.yml
+    dependencies:
+      - prometheus
