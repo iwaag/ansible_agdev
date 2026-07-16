@@ -129,22 +129,17 @@ Clone nodeutils on each selected host and write a local inventory report:
 ansible-playbook playbooks/nautobot/run_nodeutils_collect.yml --limit <host_or_group>
 ```
 
-Collect nodeutils reports and submit one batch to the Nautobot ingest Job by API:
+Collection, report-cache installation, Nautobot Job triggering/polling, and verification are
+sequenced by `nctl`, not Ansible. From the parent `pj-clusterintent` checkout:
 
 ```bash
-NAUTOBOT_URL=https://nautobot.example.local \
 NAUTOBOT_TOKEN=your-nautobot-api-token \
-ansible-playbook playbooks/nautobot/collect_nodeutils_and_ingest_nautobot.yml
+uv run --project nctl nctl reconcile --config nctl.toml --yes
 ```
 
-For production rollouts or policy changes, run a preview first:
-
-```bash
-NAUTOBOT_URL=https://nautobot.example.local \
-NAUTOBOT_TOKEN=your-nautobot-api-token \
-ansible-playbook playbooks/nautobot/collect_nodeutils_and_ingest_nautobot.yml \
-  -e nautobot_ingest_dry_run=true
-```
+`ansible_agdev/Makefile`'s `pipeline` target runs the equivalent command. Run
+`run_nodeutils_collect.yml` directly (previous section) only for diagnostics; it writes the local
+report but does not submit anything to Nautobot.
 
 Clone a Git repository and run a one-line command inside it:
 
@@ -220,9 +215,9 @@ The generated file defines `command_line` switches, so the entities should appea
 - `setup_dnsmasq.yml` installs the distro `dnsmasq` package on `dnsmasq_server` hosts and writes `/etc/dnsmasq.d/ansible.conf`. Override `dnsmasq_listen_addresses`, `dnsmasq_interfaces`, `dnsmasq_upstream_servers`, and `dnsmasq_local_domain` to fit the network. Direct record and DHCP list variables remain available for non-nctl use, but the normal source of truth for DNS records, DHCP reservations, and DHCP ranges is the rendered artifact deployed by `playbooks/dnsmasq/deploy_dnsmasq_records.yml`. When `dnsmasq_port` is `53`, the role disables the `systemd-resolved` DNS stub listener if `systemd-resolved.service` exists, so dnsmasq can bind the DNS port. It does not rewrite `/etc/resolv.conf`; check the target host's resolver configuration after changing local DNS ownership.
 - `playbooks/dnsmasq/deploy_dnsmasq_records.yml` is deploy-only: it requires `dnsmasq_records_src` to be an absolute path to a pre-rendered configuration on the controller, validates the file with `dnsmasq --test`, and installs it on `dnsmasq_server` hosts as `/etc/dnsmasq.d/nintent-records.conf`. The file can contain DNS records, DHCP reservations, and `dhcp-range=` lines; keep `/etc/dnsmasq.d/ansible.conf` for dnsmasq service settings. Rendering and Nautobot reads belong to `nctl`, so this playbook requires no Nautobot URL, token, Job polling, or File Proxy access.
 - `nctl render hosts-intent` reads desired nodes through GraphQL, validates a staged schema `3.0` inventory with `ansible-inventory --list`, and atomically replaces `inventories/generated/hosts_intent.yml`, preserving the previous file if validation fails. This generated inventory is the mDNS-only bootstrap inventory for name-reserved nodes; it carries no service groups or desired `host_os`, and is not the detailed canonical inventory. `make bootstrap-inventory` invokes this command directly; no Nautobot export Job or File Proxy is involved.
-- `nctl render production` reads `vars/deployment_profiles.yml` directly, joins it with desired and actual state, validates a staged schema `1.0` inventory with `ansible-inventory --list`, and atomically installs `inventories/generated/production.yml` plus its generation-addressed report. No Nautobot export/sync Job, projection, canonical-JSON transport, or File Proxy is involved. `make production-inventory` invokes this command, and `make pipeline` runs `bootstrap-inventory`, `collect-ingest`, then that nctl render.
-- `run_nodeutils_collect.yml` targets `ssh_hosts` by default, installs Git on Linux hosts, installs uv on Linux/macOS, clones `nodeutils_repo` into `nodeutils_checkout_dir` (`/opt/nodeutils` by default), forcibly refreshes that checkout, runs `uv sync --frozen`, and writes `nodeutils_output_path` (`/var/lib/nodeutils/inventory.json` by default). Override `nodeutils_repo`, `nodeutils_version`, `nodeutils_checkout_dir`, or `nodeutils_collect_args` when needed.
-- `collect_nodeutils_and_ingest_nautobot.yml` targets `ssh_hosts` by default, runs `run_nodeutils_collect.yml`, reads each host's `nodeutils_output_path` (`/var/lib/nodeutils/inventory.json` by default), builds one API batch, and runs the Nautobot `Ingest Nodeutils Inventory` Job. It does not copy reports to the Nautobot server or depend on Nautobot container filesystem paths. It defaults to `nautobot_ingest_dry_run=false`, so successful Ansible runs apply Nautobot Device changes. For production rollouts, policy changes, or first-time validation, set `-e nautobot_ingest_dry_run=true` to preview Job logs without committing. Nautobot connection defaults are centralized in `vars/nautobot.yml`; set `nautobot_url` and `nautobot_token` through extra vars, `NAUTOBOT_URL`/`NAUTOBOT_TOKEN`, or Vault.
+- `nctl render production` reads `vars/deployment_profiles.yml` directly, joins it with desired and actual state, validates a staged schema `1.0` inventory with `ansible-inventory --list`, and atomically installs `inventories/generated/production.yml` plus its generation-addressed report. No Nautobot export/sync Job, projection, canonical-JSON transport, or File Proxy is involved. `make production-inventory` invokes this command directly for diagnostics/manual recovery; the normal path is `make pipeline` (`nctl reconcile --yes`), which regenerates production inventory itself on every apply round.
+- `run_nodeutils_collect.yml` targets `ssh_hosts` by default, installs Git on Linux hosts, installs uv on Linux/macOS, clones `nodeutils_repo` into `nodeutils_checkout_dir` (`/opt/nodeutils` by default), forcibly refreshes that checkout, runs `uv sync --frozen`, and writes `nodeutils_output_path` (`/var/lib/nodeutils/inventory.json` by default). Override `nodeutils_repo`, `nodeutils_version`, `nodeutils_checkout_dir`, or `nodeutils_collect_args` when needed. `nctl reconcile` invokes this playbook itself against a private operation-scoped inventory; run it directly only for diagnostics, since doing so does not submit anything to Nautobot.
+- Collection sequencing, the Nautobot report cache, `Ingest Nodeutils Inventory` Job triggering/polling, and post-ingest verification all live in `nctl reconcile` (`nctl_core.observation`), not in an Ansible playbook. Ansible has no task that calls `/api/extras/jobs/` or reads a Nautobot token; `vars/nautobot.yml` and the `nautobot_url`/`nautobot_token` vault variables described in `README_ADMIN.md` are unused by any playbook in this repository and are kept only as reference for `NAUTOBOT_URL`/`NAUTOBOT_TOKEN`, which `nctl` itself reads from the environment.
 - `clone_git_and_run.yml` clones or updates `git_clone_run_repo` into `git_clone_run_dest` (`/tmp/ansible-git-clone-run` by default) and runs `git_clone_run_command` from that directory. Override `git_clone_run_version` to pin a branch, tag, or commit.
 - `wake_hosts.yml` targets `macos:&power_managed` and schedules `pmset` wake two seconds ahead on the selected host.
 - `wake_linux_hosts.yml` uses each selected Linux host's `mac_address` and sends to `255.255.255.255:9`.
