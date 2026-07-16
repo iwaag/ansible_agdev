@@ -12,7 +12,11 @@
     nodeutils_checkout_dir: /opt/nodeutils
     nodeutils_state_dir: /var/lib/nodeutils
     nodeutils_output_path: "{{ nodeutils_state_dir }}/inventory.json"
-    nodeutils_collect_args: "--format json --output {{ nodeutils_output_path }}"
+    nodeutils_probe_config_dir: ""
+    nodeutils_probe_config_path: "{{ nodeutils_state_dir }}/nctl-probe-config.yaml"
+    nodeutils_collect_args: >-
+      --format json --output {{ nodeutils_output_path }}
+      {{ ('--config ' ~ nodeutils_probe_config_path) if (nodeutils_probe_config_dir | length > 0) else '' }}
     nodeutils_uv_path: "{{ '/opt/homebrew/bin/uv' if ansible_system == 'Darwin' else '/usr/local/bin/uv' }}"
     nodeutils_extra_path: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     nodeutils_linux_packages:
@@ -61,6 +65,14 @@
       environment:
         HOME: "{{ nodeutils_home }}"
         PATH: "{{ nodeutils_extra_path }}"
+
+    - name: Install nctl-generated service probe configuration
+      ansible.builtin.copy:
+        src: "{{ nodeutils_probe_config_dir }}/{{ inventory_hostname }}.yaml"
+        dest: "{{ nodeutils_probe_config_path }}"
+        owner: "{{ nodeutils_user }}"
+        mode: "0600"
+      when: nodeutils_probe_config_dir | length > 0
 
     - name: Sync nodeutils dependencies with uv
       ansible.builtin.command:
