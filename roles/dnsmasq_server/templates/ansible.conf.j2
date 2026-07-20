@@ -16,7 +16,7 @@ no-resolv
 {% endif %}
 cache-size={{ dnsmasq_cache_size }}
 
-{% for address in dnsmasq_listen_addresses %}
+{% for address in (['127.0.0.1'] + dnsmasq_listen_addresses) | unique %}
 listen-address={{ address }}
 {% endfor %}
 {% for interface in dnsmasq_interfaces %}

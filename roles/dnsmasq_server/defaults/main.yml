@@ -11,6 +11,12 @@ dnsmasq_expand_hosts: true
 dnsmasq_no_resolv: true
 dnsmasq_cache_size: 1000
 
+# Safe default: loopback only, so declaring this profile on a node never
+# silently takes over LAN DNS/DHCP. Override per-placement (config.listen_addresses)
+# to serve other hosts. The template always adds 127.0.0.1 on top of whatever
+# is listed here, regardless of override, so this host can always resolve
+# against itself even if something else on the network (e.g. the node's own
+# resolv.conf) is pointed at this daemon's LAN address.
 dnsmasq_listen_addresses:
   - 127.0.0.1
 dnsmasq_interfaces: []
