@@ -35,6 +35,41 @@ Test SSH access after distribution:
 ssh -i ~/.ssh/ansible_key <user>@<host>
 ```
 
+## SSH host-key trust
+
+The sections above are about the *client* key Ansible authenticates with. This section is about
+the opposite direction: verifying the *server's* identity so Ansible never connects to the wrong
+host. `nctl` (in `nctl/README.md`'s "SSH trust configuration" section) owns this, keyed by each
+node's stable, immutable DesiredNode UUID rather than its current `.local`/`.home.arpa` name or IP
+-- a node first reached over mDNS stays the same trusted SSH host as its endpoint changes over its
+lifecycle:
+
+```text
+discover by mDNS
+  -> verify fingerprint / promote existing trusted .local key
+  -> nctl ssh enroll
+  -> observe and reconcile IPAM/DNS/DHCP
+  -> connect by DNS/IP/Tailscale under the same HostKeyAlias
+```
+
+- Enroll a node with `nctl ssh enroll <slug> --from-known-hosts` (promotes an already-trusted
+  `.local` entry) or `nctl ssh enroll <slug> --fingerprint SHA256:...` (a brand-new machine, using a
+  fingerprint obtained out-of-band -- machine console, provisioning output, or an administrator
+  reading it off the device). An unverified `ssh-keyscan` result never creates trust by itself.
+- Replacing hardware behind an existing DesiredNode slot requires `nctl ssh enroll <slug> --replace
+  --fingerprint SHA256:<new, verified fingerprint> --yes`; reusing the slot without `--replace` and
+  a verified source fails closed instead of silently trusting the new machine.
+- If the managed known_hosts store is lost or corrupted, the only supported recovery is
+  re-enrolling every node the same way -- never `StrictHostKeyChecking=no`, `accept-new`, or copying
+  in an unverified scan as a workaround.
+- Both `hosts_intent.yml` and `production.yml` carry the same closed `nctl_ssh_host_key_alias`/
+  `ansible_ssh_common_args` host variables, so a direct `ansible`/`ansible-playbook` invocation
+  against either generated inventory (this repo's normal supported path) fails closed exactly like
+  `nctl` does. A hand-written inventory that lacks these variables is outside the supported
+  operational path and is not expected to authenticate.
+
+See `nctl/README.md` and `nctl ssh enroll --help` for full detail; this repo does not duplicate it.
+
 ## Vault setup
 
 Create the local Vault password file outside the repository:
