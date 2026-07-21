@@ -40,12 +40,13 @@ not a cross-process authentication or byte-contract field.
 
 ## Inventory shape
 
-The generated YAML keeps the established schema 1.0 metadata under `all.vars`:
+The generated YAML keeps the established schema metadata under `all.vars` (bumped to `"3.0"` by
+`devdocs/small/fix_sshkey/plan.md` Step 4 -- see below):
 
 ```yaml
 all:
   vars:
-    nintent_inventory_schema_version: "1.0"
+    nintent_inventory_schema_version: "3.0"
     nintent_generation_id: "<uuid>"
     nintent_generated_at: "<RFC3339 UTC>"
     nintent_report_path: "production.reports/<generation_id>.json"
@@ -66,6 +67,28 @@ all:
 Service groups are derived from active placements and their deployment profiles. Host connection,
 platform, power, traceability, skip, and drift rules are implemented and tested in nctl. See the
 nctl production modules and tests for the executable contract.
+
+## SSH trust host variables (schema 3.0)
+
+Every `ssh_hosts` member also carries two controller-generated variables, derived only from the
+node's immutable DesiredNode UUID -- never from `ansible_host`, a slug, an IP, or a MAC address:
+
+```yaml
+nctl_ssh_host_key_alias: nctl-node-<DesiredNode UUID>
+ansible_ssh_common_args: >-
+  -o HostKeyAlias=nctl-node-<DesiredNode UUID>
+  -o UserKnownHostsFile=<nctl's configured [ssh].known_hosts_file>
+  -o StrictHostKeyChecking=yes
+  -o CheckHostIP=no
+  -o UpdateHostKeys=no
+```
+
+This makes SSH host-key trust follow the node's stable identity across mDNS, `.home.arpa`, a
+reserved/static IP, or a Tailscale address -- the same alias/args nctl's bootstrap
+`hosts_intent.yml` emits for the same node, byte-identical even when `ansible_host` differs. See
+`nctl/README.md`'s "SSH trust configuration" section and `nctl ssh enroll --help` for how the
+managed known_hosts file referenced by `UserKnownHostsFile` is populated; this document does not
+duplicate that lifecycle.
 
 ## Operational boundary
 
