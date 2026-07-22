@@ -128,6 +128,11 @@ production inventory for operational execution:
 inventories/generated/production.yml
 ```
 
+For routine desired DNS/DHCP changes, use `nctl reconcile --yes` rather than
+invoking the deploy playbook by hand. The generated records/ranges file is
+verified by a nodeutils-reported SHA-256 after actuation; a running dnsmasq
+process alone does not prove its nctl-owned content converged.
+
 The bootstrap/collection stage explicitly selects the minimal bootstrap
 inventory instead, so the two stages never share an ambiguous default:
 

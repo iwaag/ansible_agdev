@@ -85,6 +85,11 @@ intentionally a single generated artifact that can contain DNS records, DHCP
 reservations, and DHCP ranges. Rendering and Nautobot access belong to `nctl`;
 the playbook only actuates the supplied file.
 
+This records/ranges file is the only dnsmasq content-observation target in this
+phase. Its path comes once from `vars/deployment_profiles.yml` reconciliation
+metadata and is copied into nodeutils probe hints; do not add a second path
+literal to the playbook.
+
 Keep `/etc/dnsmasq.d/ansible.conf` focused on dnsmasq service settings such as port,
 listen addresses, interfaces, upstream resolvers, and local zones. The direct
 `dnsmasq_dhcp_ranges`, `dnsmasq_dhcp_hosts`, and static record variables in the role
