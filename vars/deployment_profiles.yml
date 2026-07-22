@@ -144,6 +144,15 @@ deployment_profile_reconciliation:
   dnsmasq:
     action:
       kind: dnsmasq_config
+      # fix_sshkey3 Step 4: the one metadata-owned source of the deployed
+      # records path. Copied verbatim into nctl-generated nodeutils probe
+      # config (nctl_core.observation.render_probe_hints); the deploy
+      # playbook (playbooks/dnsmasq/deploy_dnsmasq_records.yml) actuates the
+      # same path. Never duplicated as an independent literal elsewhere.
+      managed_files:
+        records:
+          path: /etc/dnsmasq.d/nintent-records.conf
+          digest: sha256
 
   grafana:
     action:
