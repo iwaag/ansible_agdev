@@ -80,10 +80,15 @@ prometheus_inventory_jobs:
 
 `playbooks/dnsmasq/deploy_dnsmasq_records.yml` consumes a pre-rendered dnsmasq
 configuration supplied through the required absolute-path variable
-`dnsmasq_records_src`. The deployed `/etc/dnsmasq.d/nintent-records.conf` is
-intentionally a single generated artifact that can contain DNS records, DHCP
-reservations, and DHCP ranges. Rendering and Nautobot access belong to `nctl`;
-the playbook only actuates the supplied file.
+`dnsmasq_records_src`, and installs it at the destination supplied through the
+required absolute-path variable `dnsmasq_records_config_file` (normally
+`/etc/dnsmasq.d/nintent-records.conf`). Neither variable has a playbook
+default (fix_sshkey4 Step 3): the destination is resolved exactly once by
+`nctl` from validated reconciliation metadata, never independently
+constructed by this playbook. The deployed file is intentionally a single
+generated artifact that can contain DNS records, DHCP reservations, and DHCP
+ranges. Rendering and Nautobot access belong to `nctl`; the playbook only
+actuates the supplied source file to the supplied destination.
 
 This records/ranges file is the only dnsmasq content-observation target in this
 phase. Its path comes once from `vars/deployment_profiles.yml` reconciliation
