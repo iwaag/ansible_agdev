@@ -6,8 +6,6 @@
 
   vars:
     dnsmasq_service_name: dnsmasq.service
-    dnsmasq_config_dir: /etc/dnsmasq.d
-    dnsmasq_records_config_file: "{{ dnsmasq_config_dir }}/nintent-records.conf"
 
   handlers:
     - name: Restart dnsmasq
@@ -46,6 +44,22 @@
       delegate_to: localhost
       become: false
 
+    # fix_sshkey4 Step 3: the deployed destination is owned by nctl's
+    # validated reconciliation metadata, never a playbook default -- a
+    # caller that supplies no destination is a structured configuration
+    # error, not a silently-applied fallback path.
+    - name: Assert the managed-file destination is supplied by the caller
+      ansible.builtin.assert:
+        that:
+          - dnsmasq_records_config_file is defined
+          - dnsmasq_records_config_file | default('') | string | length > 0
+          - dnsmasq_records_config_file | default('') is match('^/')
+        fail_msg: >-
+          Set dnsmasq_records_config_file to the absolute destination path
+          from nctl's validated deployment_profile_reconciliation metadata.
+      delegate_to: localhost
+      become: false
+
     - name: Gather target facts
       ansible.builtin.setup:
 
@@ -58,7 +72,7 @@
   tasks:
     - name: Ensure dnsmasq configuration directory exists
       ansible.builtin.file:
-        path: "{{ dnsmasq_config_dir }}"
+        path: "{{ dnsmasq_records_config_file | dirname }}"
         state: directory
         owner: root
         group: root
