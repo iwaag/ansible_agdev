@@ -36,6 +36,7 @@
 
   roles:
     - role: uv
+    - role: nodeutils_pvesh_helper
 
   tasks:
     - name: Ensure nodeutils checkout directory exists
@@ -95,3 +96,42 @@
         HOME: "{{ nodeutils_home }}"
         PATH: "{{ nodeutils_extra_path }}"
       changed_when: true
+
+    - name: Stat the nodeutils checkout and state directories after collection
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ nodeutils_checkout_dir }}"
+        - "{{ nodeutils_state_dir }}"
+      register: nodeutils_post_collection_dir_stats
+
+    - name: Fail if collection left a root-owned nodeutils directory
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.pw_name == nodeutils_user
+        fail_msg: >-
+          {{ item.item }} must remain owned by {{ nodeutils_user }} after collection; a root-owned
+          path indicates the pvesh privilege boundary leaked into the non-root collector.
+      loop: "{{ nodeutils_post_collection_dir_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Stat the collected nodeutils report
+      ansible.builtin.stat:
+        path: "{{ nodeutils_output_path }}"
+      register: nodeutils_report_stat
+
+    - name: Fail if the report was not produced by the non-root collector
+      ansible.builtin.assert:
+        that:
+          - nodeutils_report_stat.stat.exists
+          - nodeutils_report_stat.stat.pw_name == nodeutils_user
+        fail_msg: "{{ nodeutils_output_path }} must exist and be owned by {{ nodeutils_user }}."
+
+    - name: Fail if a Proxmox host produced a wrongly-moded report
+      ansible.builtin.assert:
+        that:
+          - nodeutils_report_stat.stat.mode == "0600"
+        fail_msg: "{{ nodeutils_output_path }} must be mode 0600 after Proxmox collection."
+      when: nodeutils_pvesh_bin_stat.stat.exists
