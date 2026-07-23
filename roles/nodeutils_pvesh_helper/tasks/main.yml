@@ -1,0 +1,104 @@
+---
+- name: Detect Proxmox by the validated absolute pvesh path
+  ansible.builtin.stat:
+    path: "{{ nodeutils_pvesh_bin }}"
+  register: nodeutils_pvesh_bin_stat
+
+- name: Install and validate the privileged pvesh helper on Proxmox hosts only
+  when: nodeutils_pvesh_bin_stat.stat.exists
+  block:
+    - name: Validate nodeutils_user against a conservative local-account regex
+      ansible.builtin.assert:
+        that:
+          - nodeutils_user is defined
+          - nodeutils_user | length > 0
+          - nodeutils_user is match('^[a-z_][a-z0-9_-]{0,31}$')
+        fail_msg: "nodeutils_user '{{ nodeutils_user | default('') }}' is not a safe local account name"
+
+    - name: Stat the pvesh binary, the Python interpreter, and their parent directories
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ nodeutils_pvesh_bin }}"
+        - "{{ nodeutils_pvesh_python_bin }}"
+        - /usr/bin
+        - /usr
+        - /
+      register: nodeutils_pvesh_trust_stats
+
+    - name: Reject a non-root-owned or group/world-writable executable or directory
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.pw_name == "root"
+          - (item.stat.mode | int(base=8)) & 0o022 == 0
+        fail_msg: >-
+          {{ item.item }} must exist, be owned by root, and be non-writable by group/other before
+          the pvesh helper can be trusted.
+      loop: "{{ nodeutils_pvesh_trust_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Create the fixed libexec directory as root:root
+      ansible.builtin.file:
+        path: "{{ nodeutils_pvesh_helper_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install the controller-owned pvesh helper as root:root mode 0755
+      ansible.builtin.copy:
+        src: nodeutils-pvesh-read
+        dest: "{{ nodeutils_pvesh_helper_path }}"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Render the sudoers fragment to a validation temp file
+      ansible.builtin.tempfile:
+        state: file
+        suffix: nodeutils-pvesh-sudoers
+      register: nodeutils_pvesh_sudoers_tmp
+      changed_when: false
+
+    - name: Write the candidate sudoers fragment
+      ansible.builtin.template:
+        src: nodeutils-pvesh.sudoers.j2
+        dest: "{{ nodeutils_pvesh_sudoers_tmp.path }}"
+        mode: "0440"
+      changed_when: false
+
+    - name: Validate the candidate sudoers fragment with visudo
+      ansible.builtin.command:
+        cmd: visudo -cf {{ nodeutils_pvesh_sudoers_tmp.path }}
+      changed_when: false
+
+    - name: Install the validated sudoers fragment atomically as root:root mode 0440
+      ansible.builtin.copy:
+        src: "{{ nodeutils_pvesh_sudoers_tmp.path }}"
+        dest: "{{ nodeutils_pvesh_sudoers_path }}"
+        owner: root
+        group: root
+        mode: "0440"
+        remote_src: true
+
+    - name: Remove the sudoers validation temp file
+      ansible.builtin.file:
+        path: "{{ nodeutils_pvesh_sudoers_tmp.path }}"
+        state: absent
+      changed_when: false
+
+    - name: Run a non-mutating preflight as nodeutils_user
+      ansible.builtin.command:
+        cmd: sudo -n {{ nodeutils_pvesh_helper_path }} {{ nodeutils_pvesh_test_endpoint }}
+      become: true
+      become_user: "{{ nodeutils_user }}"
+      changed_when: false
+      register: nodeutils_pvesh_preflight
+
+    - name: Assert the preflight returned valid JSON
+      ansible.builtin.assert:
+        that:
+          - (nodeutils_pvesh_preflight.stdout | from_json) is not none
+        fail_msg: "nodeutils-pvesh-read preflight did not return valid JSON"

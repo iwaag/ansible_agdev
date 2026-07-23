@@ -1,0 +1,43 @@
+#!/usr/bin/python3.13 -I
+"""Root-owned, read-only pvesh proxy. See devdocs/small/permission_fix/plan_pvesh.md."""
+import os
+import re
+import sys
+
+PVESH_BIN = "/usr/bin/pvesh"
+
+_NODE = r"[A-Za-z0-9][A-Za-z0-9-]{0,62}"
+_VMID = r"[1-9][0-9]{0,8}"
+
+_ALLOWED_PATHS = [re.compile(pattern) for pattern in (
+    r"\A/cluster/status\Z",
+    r"\A/cluster/resources\Z",
+    r"\A/nodes\Z",
+    rf"\A/nodes/{_NODE}/qemu\Z",
+    rf"\A/nodes/{_NODE}/lxc\Z",
+    rf"\A/nodes/{_NODE}/storage\Z",
+    rf"\A/nodes/{_NODE}/network\Z",
+    rf"\A/nodes/{_NODE}/qemu/{_VMID}/config\Z",
+    rf"\A/nodes/{_NODE}/lxc/{_VMID}/config\Z",
+    rf"\A/nodes/{_NODE}/qemu/{_VMID}/agent/network-get-interfaces\Z",
+)]
+
+
+def validate_path(argv):
+    if len(argv) != 2:
+        sys.exit("nodeutils-pvesh-read: expected exactly one API path argument")
+    path = argv[1]
+    if not any(pattern.match(path) for pattern in _ALLOWED_PATHS):
+        sys.exit("nodeutils-pvesh-read: rejected API path")
+    return path
+
+
+def main(argv):
+    path = validate_path(argv)
+    pvesh_argv = [PVESH_BIN, "get", path, "--output-format", "json"]
+    pvesh_env = {"PATH": "/usr/bin:/bin", "HOME": "/root"}
+    os.execve(PVESH_BIN, pvesh_argv, pvesh_env)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

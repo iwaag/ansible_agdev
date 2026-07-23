@@ -1,0 +1,12 @@
+---
+# Security-protocol constants shared with nodeutils/proxmox_inventory.py. Both sides must assert
+# the exact same path so the sudo grant and the caller cannot drift apart.
+nodeutils_pvesh_helper_path: /usr/local/libexec/nodeutils-pvesh-read
+nodeutils_pvesh_helper_dir: /usr/local/libexec
+nodeutils_pvesh_sudoers_path: /etc/sudoers.d/nodeutils-pvesh
+
+# Confirmed on aghub in Step 0 (devdocs/small/permission_fix/report0.md). Not inventory-configurable.
+nodeutils_pvesh_python_bin: /usr/bin/python3.13
+nodeutils_pvesh_bin: /usr/bin/pvesh
+
+nodeutils_pvesh_test_endpoint: /cluster/status
