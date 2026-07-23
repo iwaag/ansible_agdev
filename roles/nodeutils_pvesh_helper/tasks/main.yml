@@ -31,7 +31,8 @@
         that:
           - item.stat.exists
           - item.stat.pw_name == "root"
-          - (item.stat.mode | int(base=8)) & 0o022 == 0
+          - not item.stat.wgrp
+          - not item.stat.woth
         fail_msg: >-
           {{ item.item }} must exist, be owned by root, and be non-writable by group/other before
           the pvesh helper can be trusted.
