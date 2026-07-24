@@ -31,6 +31,9 @@ ACCEPTED_PATHS = [
     "/nodes/aghub/lxc/9999/config",
     "/nodes/aghub/qemu/100/agent/network-get-interfaces",
     "/nodes/pve-node-1/qemu/1/config",
+    "/nodes/aghub/storage/local/content",
+    "/nodes/aghub/storage/local-lvm/content",
+    "/nodes/aghub/storage/local_lvm/content",
 ]
 
 REJECTED_PATHS = [
@@ -55,6 +58,21 @@ REJECTED_PATHS = [
     "/nodes/aghub/qemu/100/status/start",
     "-e",
     "--help",
+    # storage-content negative cases: traversal, query strings, whitespace, shell syntax,
+    # extra path segments, invalid storage identifiers, and any write/status verb or path.
+    "/nodes/aghub/storage/local/content/",
+    "/nodes/aghub/storage/../../etc/passwd/content",
+    "/nodes/aghub/storage/local/content?extra=1",
+    "/nodes/aghub/storage/local /content",
+    "/nodes/aghub/storage/local/content; rm -rf /",
+    "/nodes/aghub/storage/local/content`id`",
+    "/nodes/aghub/storage/local/content$(id)",
+    "/nodes/aghub/storage//content",
+    "/nodes/aghub/storage/local!/content",
+    "/nodes/aghub/storage/local/content/extra",
+    "/nodes/aghub/storage/local/content/100",
+    "/nodes/aghub/storage/local/status",
+    "/nodes/aghub/storage/local/content/100/download",
 ]
 
 
