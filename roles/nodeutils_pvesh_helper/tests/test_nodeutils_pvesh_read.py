@@ -75,30 +75,31 @@ REJECTED_PATHS = [
     "/nodes/aghub/storage/local/content/100/download",
 ]
 
+# Tier B / domain_contract: validate_path is the authoritative allowlist boundary.  These rows
+# vary argv cardinality and endpoint syntax, asserting the canonical path or stable diagnostic.
+# Exec construction and the real privileged-helper boundary are intentionally covered separately.
+VALIDATE_PATH_CASES = [
+    (f"accepted-{index:02d}", ["prog", path], path, None)
+    for index, path in enumerate(ACCEPTED_PATHS, start=1)
+] + [
+    (f"rejected-{index:02d}", ["prog", path], None, "rejected API path")
+    for index, path in enumerate(REJECTED_PATHS, start=1)
+] + [
+    ("extra-argument-rejected", ["prog", "/cluster/status", "/cluster/resources"], None, "expected exactly one API path argument"),
+    ("missing-argument-rejected", ["prog"], None, "expected exactly one API path argument"),
+    ("empty-argument-rejected", ["prog", ""], None, "rejected API path"),
+]
+
 
 class ValidatePathTests(unittest.TestCase):
-    def test_every_required_endpoint_is_accepted(self):
-        for path in ACCEPTED_PATHS:
-            with self.subTest(path=path):
-                self.assertEqual(helper.validate_path(["prog", path]), path)
-
-    def test_unknown_endpoints_and_verbs_are_rejected(self):
-        for path in REJECTED_PATHS:
-            with self.subTest(path=path):
-                with self.assertRaises(SystemExit):
-                    helper.validate_path(["prog", path])
-
-    def test_extra_arguments_are_rejected(self):
-        with self.assertRaises(SystemExit):
-            helper.validate_path(["prog", "/cluster/status", "/cluster/resources"])
-
-    def test_missing_argument_is_rejected(self):
-        with self.assertRaises(SystemExit):
-            helper.validate_path(["prog"])
-
-    def test_no_argument_slips_through_as_empty(self):
-        with self.assertRaises(SystemExit):
-            helper.validate_path(["prog", ""])
+    def test_validate_path_contract(self):
+        for case_id, argv, expected_path, expected_error in VALIDATE_PATH_CASES:
+            with self.subTest(case_id=case_id):
+                if expected_error is None:
+                    self.assertEqual(helper.validate_path(argv), expected_path)
+                else:
+                    with self.assertRaisesRegex(SystemExit, expected_error):
+                        helper.validate_path(argv)
 
 
 class MainExecTests(unittest.TestCase):
