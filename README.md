@@ -3,6 +3,10 @@
 Operational usage lives here. Initial SSH, inventory, and Vault setup is documented in `README_ADMIN.md`.
 The minimal webhook server lives in `api/`. See `api/README.md`.
 
+The repository [test strategy command matrix](../README_DEV.md#test-strategy-command-matrix) is the
+authoritative source for the nodeutils helper suite, Ansible conformance gate, prerequisites, and
+fixture cleanup ownership.
+
 ## Playbooks
 
 Render the nintent mDNS bootstrap inventory from Nautobot desired state:
