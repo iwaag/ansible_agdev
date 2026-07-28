@@ -2,18 +2,24 @@
 - name: Create one intent-pinned LXC guest
   hosts: all
   gather_facts: false
-  become: true
+  # Production defaults to root on the Proxmox control node.  The explicit
+  # override is only for the disposable localhost conformance boundary.
+  become: "{{ nctl_compute_become | default(true) }}"
+  vars:
+    # The production default is intentionally absolute.  The variable exists
+    # only so the real-playbook conformance test can supply a disposable stub.
+    pct_binary: /usr/sbin/pct
   tasks:
     - name: Refuse an occupied VMID
       ansible.builtin.command:
-        argv: [/usr/sbin/pct, status, "{{ vmid | string }}"]
+        argv: ["{{ pct_binary }}", status, "{{ vmid | string }}"]
       register: pct_status
       failed_when: pct_status.rc == 0
       changed_when: false
     - name: Create the pinned guest
       ansible.builtin.command:
         argv:
-          - /usr/sbin/pct
+          - "{{ pct_binary }}"
           - create
           - "{{ vmid | string }}"
           - "{{ template }}"
@@ -34,10 +40,11 @@
       when: pct_status.rc != 0
     - name: Start the created guest
       ansible.builtin.command:
-        argv: [/usr/sbin/pct, start, "{{ vmid | string }}"]
+        argv: ["{{ pct_binary }}", start, "{{ vmid | string }}"]
       when: pct_status.rc != 0
     - name: Record exact successful create result
       ansible.builtin.copy:
         content: "{{ {'created': true, 'started': true} | to_json }}"
         dest: "{{ result_path }}"
         mode: '0600'
+      delegate_to: localhost
