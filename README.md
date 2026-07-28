@@ -9,6 +9,11 @@ fixture cleanup ownership.
 
 ## Playbooks
 
+`playbooks/proxmox/create_lxc.yml` is nctl's bounded compute-create adapter. It is not a
+standalone lifecycle tool: nctl supplies the preflight-pinned VMID, template, storage, bridge,
+resource, and MAC values, and the playbook performs only status, create, and start for that one
+guest.
+
 Render the nintent mDNS bootstrap inventory from Nautobot desired state:
 
 ```bash

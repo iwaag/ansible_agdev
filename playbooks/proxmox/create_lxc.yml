@@ -1,0 +1,43 @@
+---
+- name: Create one intent-pinned LXC guest
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Refuse an occupied VMID
+      ansible.builtin.command:
+        argv: [/usr/sbin/pct, status, "{{ vmid | string }}"]
+      register: pct_status
+      failed_when: pct_status.rc == 0
+      changed_when: false
+    - name: Create the pinned guest
+      ansible.builtin.command:
+        argv:
+          - /usr/sbin/pct
+          - create
+          - "{{ vmid | string }}"
+          - "{{ template }}"
+          - --hostname
+          - "{{ hostname }}"
+          - --cores
+          - "{{ vcpus | string }}"
+          - --memory
+          - "{{ memory_mb | string }}"
+          - --rootfs
+          - "{{ storage }}:{{ root_disk_gb }}"
+          - --net0
+          - "name=eth0,bridge={{ bridge }},hwaddr={{ mac_address }}"
+          - --unprivileged
+          - "{{ 1 if unprivileged else 0 }}"
+          - --onboot
+          - "1"
+      when: pct_status.rc != 0
+    - name: Start the created guest
+      ansible.builtin.command:
+        argv: [/usr/sbin/pct, start, "{{ vmid | string }}"]
+      when: pct_status.rc != 0
+    - name: Record exact successful create result
+      ansible.builtin.copy:
+        content: "{{ {'created': true, 'started': true} | to_json }}"
+        dest: "{{ result_path }}"
+        mode: '0600'
