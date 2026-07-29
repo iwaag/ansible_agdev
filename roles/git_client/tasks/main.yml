@@ -7,6 +7,12 @@
       git_client role supports Linux hosts only.
       Got ansible_system={{ ansible_system }}.
 
+- name: Refresh APT package cache before installing Git
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_pkg_mgr == "apt"
+
 - name: Install Git packages
   ansible.builtin.package:
     name: "{{ git_client_packages }}"
