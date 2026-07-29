@@ -32,7 +32,7 @@
           - --rootfs
           - "{{ storage }}:{{ root_disk_gb }}"
           - --net0
-          - "name=eth0,bridge={{ bridge }},hwaddr={{ mac_address }}"
+          - "name=eth0,bridge={{ bridge }},hwaddr={{ mac_address }},ip={{ ipv4_cidr }},gw={{ gateway_ipv4 }}"
           - --unprivileged
           - "{{ 1 if unprivileged else 0 }}"
           - --onboot
