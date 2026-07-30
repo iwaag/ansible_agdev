@@ -48,3 +48,6 @@
         dest: "{{ result_path }}"
         mode: '0600'
       delegate_to: localhost
+      # This is controller-owned evidence consumed by the unprivileged nctl
+      # process after the playbook returns; do not inherit the Proxmox sudo.
+      become: false
