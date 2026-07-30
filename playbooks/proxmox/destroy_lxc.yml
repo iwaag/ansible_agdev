@@ -1,0 +1,34 @@
+---
+- name: Destroy one intent-pinned LXC guest
+  hosts: all
+  gather_facts: false
+  become: "{{ nctl_compute_become | default(true) }}"
+  vars:
+    pct_binary: /usr/sbin/pct
+  tasks:
+    - name: Probe the pinned guest
+      ansible.builtin.command:
+        argv: ["{{ pct_binary }}", status, "{{ vmid | string }}"]
+      register: pct_status_before
+      failed_when: false
+      changed_when: false
+    - name: Stop the pinned running guest
+      ansible.builtin.command:
+        argv: ["{{ pct_binary }}", stop, "{{ vmid | string }}"]
+      when: pct_status_before.rc == 0 and "running" in pct_status_before.stdout
+    - name: Destroy the pinned guest
+      ansible.builtin.command:
+        argv: ["{{ pct_binary }}", destroy, "{{ vmid | string }}"]
+      when: pct_status_before.rc == 0
+    - name: Confirm the pinned guest is absent
+      ansible.builtin.command:
+        argv: ["{{ pct_binary }}", status, "{{ vmid | string }}"]
+      register: pct_status_after
+      failed_when: pct_status_after.rc == 0
+      changed_when: false
+    - name: Record exact destroy result
+      ansible.builtin.copy:
+        content: "{{ {'destroyed': (pct_status_before.rc == 0), 'absent': true} | to_json }}"
+        dest: "{{ result_path }}"
+        mode: '0600'
+      delegate_to: localhost
