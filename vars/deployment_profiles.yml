@@ -215,6 +215,16 @@ deployment_profile_reconciliation:
     action:
       kind: playbook
       playbook: playbooks/agent/setup_opencode.yml
+      # service_relation Phase 3: the one metadata-owned source of the
+      # consumer-side binding slot. Copied verbatim into the nctl-generated
+      # nodeutils probe config (nctl_core.observation.render_probe_hints);
+      # the deploy playbook (playbooks/agent/setup_opencode.yml, via
+      # roles/opencode_agent/templates/opencode.json.j2) writes the same
+      # json_path. Never duplicated as an independent literal elsewhere.
+      bindings:
+        llm_provider:
+          config_file: ~/.config/opencode/opencode.json
+          json_path: provider.ollama.options.baseURL
 
   # The first rollout adopts the already-running provider on agstudio. Its
   # process state is still observed and drifted through nodeutils; a portable
