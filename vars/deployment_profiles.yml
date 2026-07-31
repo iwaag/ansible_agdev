@@ -139,6 +139,11 @@ deployment_profiles:
     config_schema_version: "1"
     variables: {}
 
+  node_agent:
+    group: node_agent_hosts
+    config_schema_version: "1"
+    variables: {}
+
 
 # Phase 4 Step 5 (nctl reconcile planner): which profiles have a registered
 # reconciliation action, what kind it is, and their actuation order. This is
@@ -201,3 +206,7 @@ deployment_profile_reconciliation:
   manual_toolchain:
     observe_only: true
 
+  node_agent:
+    action:
+      kind: playbook
+      playbook: playbooks/agent/setup_opencode.yml

@@ -1,6 +1,6 @@
 ---
 - name: Install and repair the OpenCode node agent
-  hosts: ssh_hosts
+  hosts: node_agent_hosts
   gather_facts: true
   become: false
 
