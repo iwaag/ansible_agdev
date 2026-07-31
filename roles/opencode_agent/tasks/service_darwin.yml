@@ -17,7 +17,7 @@
     argv:
       - launchctl
       - print
-      - "gui/{{ ansible_user_uid }}/com.clusterintent.opencode.agent"
+      - "gui/{{ ansible_facts['user_uid'] }}/com.clusterintent.opencode.agent"
   register: opencode_agent_launchctl_status
   changed_when: false
   failed_when: false
@@ -27,7 +27,7 @@
     argv:
       - launchctl
       - bootstrap
-      - "gui/{{ ansible_user_uid }}"
+      - "gui/{{ ansible_facts['user_uid'] }}"
       - "{{ opencode_agent_home }}/Library/LaunchAgents/com.clusterintent.opencode.agent.plist"
   when: opencode_agent_launchctl_status.rc != 0
   register: opencode_agent_launchctl_bootstrap

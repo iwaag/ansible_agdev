@@ -1,20 +1,20 @@
 ---
 - name: Select the pinned OpenCode archive for this host
   ansible.builtin.set_fact:
-    opencode_agent_archive: "{{ opencode_agent_archives.get(ansible_system ~ '-' ~ ansible_architecture) }}"
+    opencode_agent_archive: "{{ opencode_agent_archives.get(ansible_facts['system'] ~ '-' ~ ansible_facts['architecture']) }}"
 
 - name: Require a supported OpenCode platform
   ansible.builtin.assert:
     that: opencode_agent_archive is not none
     fail_msg: >-
       OpenCode {{ opencode_agent_version }} has no pinned archive for
-      {{ ansible_system }}-{{ ansible_architecture }}.
+      {{ ansible_facts['system'] }}-{{ ansible_facts['architecture'] }}.
 
 - name: Set OpenCode installation paths
   ansible.builtin.set_fact:
-    opencode_agent_home: "{{ ansible_env.HOME }}"
-    opencode_agent_bin: "{{ ansible_env.HOME }}/.local/bin/opencode"
-    opencode_agent_config_dir: "{{ ansible_env.HOME }}/.config/opencode"
+    opencode_agent_home: "{{ ansible_facts['env']['HOME'] }}"
+    opencode_agent_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/opencode"
+    opencode_agent_config_dir: "{{ ansible_facts['env']['HOME'] }}/.config/opencode"
 
 - name: Check the installed OpenCode version
   ansible.builtin.command: "{{ opencode_agent_bin }} --version"
@@ -23,9 +23,11 @@
   failed_when: false
 
 - name: Install pinned OpenCode when absent or outdated
-  when: >-
-    opencode_agent_installed_version.rc != 0 or
-    opencode_agent_version not in opencode_agent_installed_version.stdout
+  when:
+    - not ansible_check_mode
+    - >-
+      opencode_agent_installed_version.rc != 0 or
+      opencode_agent_version not in opencode_agent_installed_version.stdout
   block:
     - name: Create a private OpenCode staging directory
       ansible.builtin.tempfile:
@@ -39,6 +41,12 @@
         dest: "{{ opencode_agent_stage.path }}/{{ opencode_agent_archive.filename }}"
         checksum: "sha256:{{ opencode_agent_archive.sha256 }}"
         mode: "0600"
+
+    - name: Create the OpenCode archive extraction directory
+      ansible.builtin.file:
+        path: "{{ opencode_agent_stage.path }}/unpack"
+        state: directory
+        mode: "0700"
 
     - name: Unpack the verified OpenCode archive
       ansible.builtin.unarchive:
@@ -87,10 +95,12 @@
   notify: restart opencode agent
 
 - name: Install the platform service
-  ansible.builtin.include_tasks: "service_{{ ansible_system | lower }}.yml"
+  ansible.builtin.include_tasks: "service_{{ ansible_facts['system'] | lower }}.yml"
+  when: not ansible_check_mode
 
 - name: Apply pending OpenCode service changes
   ansible.builtin.meta: flush_handlers
+  when: not ansible_check_mode
 
 - name: Verify the OpenCode service health endpoint
   ansible.builtin.uri:
@@ -101,3 +111,4 @@
   retries: 10
   delay: 1
   until: opencode_agent_health.status == 200
+  when: not ansible_check_mode

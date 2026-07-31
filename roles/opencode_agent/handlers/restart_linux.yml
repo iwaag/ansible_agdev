@@ -2,10 +2,10 @@
 - name: Reload the systemd user manager
   ansible.builtin.command: systemctl --user daemon-reload
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
   changed_when: false
 
 - name: Restart the OpenCode user service
   ansible.builtin.command: systemctl --user restart opencode-agent.service
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"

@@ -4,6 +4,14 @@
   gather_facts: true
   become: false
 
+  vars_files:
+    - ../../vars/opencode_agent.yml
+
+  vars:
+    opencode_agent_ollama_url: >-
+      {{ opencode_agent_ollama_urls[inventory_hostname]
+         | default(opencode_agent_default_ollama_url) }}
+
   pre_tasks:
     - name: Require an explicit target limit
       ansible.builtin.assert:

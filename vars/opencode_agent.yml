@@ -1,0 +1,6 @@
+---
+# Node-specific, non-secret transport choices for the Phase 2 experiment.
+# agstudio serves its own loopback Ollama.  agpc can already reach the
+# existing agstudio endpoint, so this does not change Ollama's bind address.
+opencode_agent_ollama_urls:
+  agpc: http://agstudio.local:11434/v1

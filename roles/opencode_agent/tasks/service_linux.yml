@@ -26,13 +26,13 @@
 - name: Reload the systemd user manager before checking the service
   ansible.builtin.command: systemctl --user daemon-reload
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
   changed_when: false
 
 - name: Check whether the OpenCode user service is active
   ansible.builtin.command: "systemctl --user is-active opencode-agent.service"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
   register: opencode_agent_systemd_status
   changed_when: false
   failed_when: false
@@ -40,5 +40,5 @@
 - name: Start the inactive OpenCode user service
   ansible.builtin.command: "systemctl --user start opencode-agent.service"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
   when: opencode_agent_systemd_status.rc != 0
