@@ -134,6 +134,12 @@ deployment_profiles:
     config_schema_version: "1"
     variables: {}
 
+  manual_toolchain:
+    group: manual_toolchains
+    config_schema_version: "1"
+    variables: {}
+
+
 # Phase 4 Step 5 (nctl reconcile planner): which profiles have a registered
 # reconciliation action, what kind it is, and their actuation order. This is
 # a separate top-level key from deployment_profiles on purpose -- it must
@@ -191,3 +197,7 @@ deployment_profile_reconciliation:
       playbook: playbooks/monitoring/setup_node_exporter.yml
     dependencies:
       - prometheus
+
+  manual_toolchain:
+    observe_only: true
+
