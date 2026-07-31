@@ -20,6 +20,7 @@ opencode_agent_user: "{{ ansible_user | default('eiji') }}"
 opencode_agent_port: 4096
 opencode_agent_listen: 127.0.0.1
 opencode_agent_workdir: "{{ ansible_facts['env']['HOME'] }}/agent-work"
-opencode_agent_default_ollama_url: http://127.0.0.1:11434/v1
-opencode_agent_ollama_url: "{{ opencode_agent_default_ollama_url }}"
+# The playbook supplies this from nctl's desired-service dependency resolver.
+# A loopback default would hide missing cluster intent on newly added nodes.
+opencode_agent_ollama_url: ""
 opencode_agent_model: qwen3.6:35b-a3b-coding-nvfp4

@@ -4,13 +4,8 @@
   gather_facts: true
   become: false
 
-  vars_files:
-    - ../../vars/opencode_agent.yml
-
   vars:
-    opencode_agent_ollama_url: >-
-      {{ opencode_agent_ollama_urls[inventory_hostname]
-         | default(opencode_agent_default_ollama_url) }}
+    opencode_agent_ollama_url: "{{ nintent_opencode_ollama_url }}"
 
   pre_tasks:
     - name: Require an explicit target limit
@@ -20,6 +15,15 @@
           - ansible_limit | length > 0
         fail_msg: >-
           Select an intended node explicitly, for example: --limit agstudio.
+
+    - name: Require a resolved LLM provider endpoint from nctl inventory
+      ansible.builtin.assert:
+        that:
+          - nintent_opencode_ollama_url is defined
+          - nintent_opencode_ollama_url is string
+          - nintent_opencode_ollama_url | length > 0
+        fail_msg: >-
+          This node-agent placement needs an LLM provider resolved from desired state.
 
   roles:
     - role: opencode_agent

@@ -142,6 +142,15 @@ deployment_profiles:
   node_agent:
     group: node_agent_hosts
     config_schema_version: "1"
+    variables:
+      llm_provider_service:
+        ansible_variable: nintent_llm_provider_service
+        type: string
+        required: true
+
+  ollama:
+    group: ollama_server
+    config_schema_version: "1"
     variables: {}
 
 
@@ -210,3 +219,10 @@ deployment_profile_reconciliation:
     action:
       kind: playbook
       playbook: playbooks/agent/setup_opencode.yml
+
+  # The first rollout adopts the already-running provider on agstudio. Its
+  # process state is still observed and drifted through nodeutils; a portable
+  # installer can replace observe_only when the provider deployment is owned
+  # by this repository.
+  ollama:
+    observe_only: true

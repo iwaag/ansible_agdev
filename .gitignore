@@ -14,3 +14,4 @@ inventories/generated/group_vars/all/*
 !inventories/generated/group_vars/all/vault.example.yml
 .env
 .DS_Store
+vars/opencode_agent.yml
