@@ -142,11 +142,7 @@ deployment_profiles:
   node_agent:
     group: node_agent_hosts
     config_schema_version: "1"
-    variables:
-      llm_provider_service:
-        ansible_variable: nintent_llm_provider_service
-        type: string
-        required: true
+    variables: {}
 
   ollama:
     group: ollama_server
