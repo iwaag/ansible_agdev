@@ -1,0 +1,37 @@
+---
+- name: Create the user LaunchAgents directory
+  ansible.builtin.file:
+    path: "{{ opencode_agent_home }}/Library/LaunchAgents"
+    state: directory
+    mode: "0755"
+
+- name: Install the OpenCode LaunchAgent
+  ansible.builtin.template:
+    src: com.clusterintent.opencode.agent.plist.j2
+    dest: "{{ opencode_agent_home }}/Library/LaunchAgents/com.clusterintent.opencode.agent.plist"
+    mode: "0644"
+  notify: restart opencode agent
+
+- name: Check whether the OpenCode LaunchAgent is loaded
+  ansible.builtin.command:
+    argv:
+      - launchctl
+      - print
+      - "gui/{{ ansible_user_uid }}/com.clusterintent.opencode.agent"
+  register: opencode_agent_launchctl_status
+  changed_when: false
+  failed_when: false
+
+- name: Bootstrap the OpenCode LaunchAgent
+  ansible.builtin.command:
+    argv:
+      - launchctl
+      - bootstrap
+      - "gui/{{ ansible_user_uid }}"
+      - "{{ opencode_agent_home }}/Library/LaunchAgents/com.clusterintent.opencode.agent.plist"
+  when: opencode_agent_launchctl_status.rc != 0
+  register: opencode_agent_launchctl_bootstrap
+  changed_when: opencode_agent_launchctl_bootstrap.rc == 0
+  failed_when: >-
+    opencode_agent_launchctl_bootstrap.rc != 0 and
+    'already bootstrapped' not in (opencode_agent_launchctl_bootstrap.stderr | lower)

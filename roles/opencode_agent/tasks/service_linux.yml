@@ -1,0 +1,44 @@
+---
+- name: Enable lingering for the OpenCode operational user
+  become: true
+  ansible.builtin.command: "loginctl show-user {{ opencode_agent_user }} -p Linger --value"
+  register: opencode_agent_linger
+  changed_when: false
+
+- name: Enable lingering for the OpenCode operational user
+  become: true
+  ansible.builtin.command: "loginctl enable-linger {{ opencode_agent_user }}"
+  when: opencode_agent_linger.stdout | lower != 'yes'
+
+- name: Create the systemd user-unit directory
+  ansible.builtin.file:
+    path: "{{ opencode_agent_home }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+
+- name: Install the OpenCode systemd user unit
+  ansible.builtin.template:
+    src: opencode-agent.service.j2
+    dest: "{{ opencode_agent_home }}/.config/systemd/user/opencode-agent.service"
+    mode: "0644"
+  notify: restart opencode agent
+
+- name: Reload the systemd user manager before checking the service
+  ansible.builtin.command: systemctl --user daemon-reload
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+  changed_when: false
+
+- name: Check whether the OpenCode user service is active
+  ansible.builtin.command: "systemctl --user is-active opencode-agent.service"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+  register: opencode_agent_systemd_status
+  changed_when: false
+  failed_when: false
+
+- name: Start the inactive OpenCode user service
+  ansible.builtin.command: "systemctl --user start opencode-agent.service"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+  when: opencode_agent_systemd_status.rc != 0

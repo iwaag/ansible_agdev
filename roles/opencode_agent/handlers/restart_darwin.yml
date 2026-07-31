@@ -1,0 +1,8 @@
+---
+- name: Restart the OpenCode LaunchAgent
+  ansible.builtin.command:
+    argv:
+      - launchctl
+      - kickstart
+      - -k
+      - "gui/{{ ansible_user_uid }}/com.clusterintent.opencode.agent"

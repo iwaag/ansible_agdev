@@ -1,0 +1,3 @@
+---
+- name: restart opencode agent
+  ansible.builtin.include_tasks: "restart_{{ ansible_system | lower }}.yml"

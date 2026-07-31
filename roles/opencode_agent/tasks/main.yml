@@ -1,0 +1,103 @@
+---
+- name: Select the pinned OpenCode archive for this host
+  ansible.builtin.set_fact:
+    opencode_agent_archive: "{{ opencode_agent_archives.get(ansible_system ~ '-' ~ ansible_architecture) }}"
+
+- name: Require a supported OpenCode platform
+  ansible.builtin.assert:
+    that: opencode_agent_archive is not none
+    fail_msg: >-
+      OpenCode {{ opencode_agent_version }} has no pinned archive for
+      {{ ansible_system }}-{{ ansible_architecture }}.
+
+- name: Set OpenCode installation paths
+  ansible.builtin.set_fact:
+    opencode_agent_home: "{{ ansible_env.HOME }}"
+    opencode_agent_bin: "{{ ansible_env.HOME }}/.local/bin/opencode"
+    opencode_agent_config_dir: "{{ ansible_env.HOME }}/.config/opencode"
+
+- name: Check the installed OpenCode version
+  ansible.builtin.command: "{{ opencode_agent_bin }} --version"
+  register: opencode_agent_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Install pinned OpenCode when absent or outdated
+  when: >-
+    opencode_agent_installed_version.rc != 0 or
+    opencode_agent_version not in opencode_agent_installed_version.stdout
+  block:
+    - name: Create a private OpenCode staging directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: opencode-agent-
+      register: opencode_agent_stage
+
+    - name: Download the pinned OpenCode archive
+      ansible.builtin.get_url:
+        url: "https://github.com/anomalyco/opencode/releases/download/v{{ opencode_agent_version }}/{{ opencode_agent_archive.filename }}"
+        dest: "{{ opencode_agent_stage.path }}/{{ opencode_agent_archive.filename }}"
+        checksum: "sha256:{{ opencode_agent_archive.sha256 }}"
+        mode: "0600"
+
+    - name: Unpack the verified OpenCode archive
+      ansible.builtin.unarchive:
+        src: "{{ opencode_agent_stage.path }}/{{ opencode_agent_archive.filename }}"
+        dest: "{{ opencode_agent_stage.path }}/unpack"
+        remote_src: true
+
+    - name: Create the local binary directory
+      ansible.builtin.file:
+        path: "{{ opencode_agent_home }}/.local/bin"
+        state: directory
+        mode: "0755"
+
+    - name: Install the verified OpenCode binary
+      ansible.builtin.copy:
+        src: "{{ opencode_agent_stage.path }}/unpack/opencode"
+        dest: "{{ opencode_agent_bin }}"
+        remote_src: true
+        mode: "0755"
+      notify: restart opencode agent
+
+  always:
+    - name: Remove the OpenCode staging directory
+      ansible.builtin.file:
+        path: "{{ opencode_agent_stage.path }}"
+        state: absent
+      when: opencode_agent_stage is defined
+
+- name: Create the OpenCode configuration directory
+  ansible.builtin.file:
+    path: "{{ opencode_agent_config_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Create the OpenCode working directory
+  ansible.builtin.file:
+    path: "{{ opencode_agent_workdir }}"
+    state: directory
+    mode: "0755"
+
+- name: Configure OpenCode
+  ansible.builtin.template:
+    src: opencode.json.j2
+    dest: "{{ opencode_agent_config_dir }}/opencode.json"
+    mode: "0600"
+  notify: restart opencode agent
+
+- name: Install the platform service
+  ansible.builtin.include_tasks: "service_{{ ansible_system | lower }}.yml"
+
+- name: Apply pending OpenCode service changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify the OpenCode service health endpoint
+  ansible.builtin.uri:
+    url: "http://{{ opencode_agent_listen }}:{{ opencode_agent_port }}/doc"
+    method: GET
+    status_code: 200
+  register: opencode_agent_health
+  retries: 10
+  delay: 1
+  until: opencode_agent_health.status == 200

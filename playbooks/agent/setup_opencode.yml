@@ -1,0 +1,17 @@
+---
+- name: Install and repair the OpenCode node agent
+  hosts: ssh_hosts
+  gather_facts: true
+  become: false
+
+  pre_tasks:
+    - name: Require an explicit target limit
+      ansible.builtin.assert:
+        that:
+          - ansible_limit is defined
+          - ansible_limit | length > 0
+        fail_msg: >-
+          Select an intended node explicitly, for example: --limit agstudio.
+
+  roles:
+    - role: opencode_agent
