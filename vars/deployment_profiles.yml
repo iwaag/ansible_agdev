@@ -149,22 +149,28 @@ deployment_profiles:
     config_schema_version: "1"
     variables: {}
 
+  swarmui:
+    group: swarmui_server
+    config_schema_version: "1"
+    variables:
+      endpoint:
+        ansible_variable: swarmui_endpoint
+        type: string
+        required: false
 
-# Phase 4 Step 5 (nctl reconcile planner): which profiles have a registered
-# reconciliation action, what kind it is, and their actuation order. This is
-# a separate top-level key from deployment_profiles on purpose -- it must
-# never perturb that key's closed production-inventory contract/digest. A
-# profile absent here, or present with neither `action` nor `observe_only`,
-# is `unsupported`: nctl never invents a playbook for it.
+  comfyui:
+    group: comfyui_server
+    config_schema_version: "1"
+    variables:
+      endpoint:
+        ansible_variable: comfyui_endpoint
+        type: string
+        required: false
+
 deployment_profile_reconciliation:
   dnsmasq:
     action:
       kind: dnsmasq_config
-      # fix_sshkey3 Step 4: the one metadata-owned source of the deployed
-      # records path. Copied verbatim into nctl-generated nodeutils probe
-      # config (nctl_core.observation.render_probe_hints); the deploy
-      # playbook (playbooks/dnsmasq/deploy_dnsmasq_records.yml) actuates the
-      # same path. Never duplicated as an independent literal elsewhere.
       managed_files:
         records:
           path: /etc/dnsmasq.d/nintent-records.conf
@@ -178,8 +184,6 @@ deployment_profile_reconciliation:
       - prometheus
 
   home_assistant:
-    # Declared/HAOS nodes are actual-state-exempt (Phase 2 Step 3); nothing
-    # here to actuate from nodeutils-observed drift.
     observe_only: true
 
   nomad_client:
@@ -211,24 +215,21 @@ deployment_profile_reconciliation:
   manual_toolchain:
     observe_only: true
 
+  swarmui:
+    observe_only: true
+
+  comfyui:
+    observe_only: true
+
+
   node_agent:
     action:
       kind: playbook
       playbook: playbooks/agent/setup_opencode.yml
-      # service_relation Phase 3: the one metadata-owned source of the
-      # consumer-side binding slot. Copied verbatim into the nctl-generated
-      # nodeutils probe config (nctl_core.observation.render_probe_hints);
-      # the deploy playbook (playbooks/agent/setup_opencode.yml, via
-      # roles/opencode_agent/templates/opencode.json.j2) writes the same
-      # json_path. Never duplicated as an independent literal elsewhere.
       bindings:
         llm_provider:
           config_file: ~/.config/opencode/opencode.json
           json_path: provider.ollama.options.baseURL
 
-  # The first rollout adopts the already-running provider on agstudio. Its
-  # process state is still observed and drifted through nodeutils; a portable
-  # installer can replace observe_only when the provider deployment is owned
-  # by this repository.
   ollama:
     observe_only: true
