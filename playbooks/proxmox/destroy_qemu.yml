@@ -1,0 +1,37 @@
+---
+- name: Destroy one intent-pinned QEMU guest
+  hosts: all
+  gather_facts: false
+  become: "{{ nctl_compute_become | default(true) }}"
+  vars:
+    qm_binary: /usr/sbin/qm
+  tasks:
+    - name: Probe the pinned guest
+      ansible.builtin.command:
+        argv: ["{{ qm_binary }}", status, "{{ vmid | string }}"]
+      register: qm_status_before
+      failed_when: false
+      changed_when: false
+    - name: Stop the pinned running guest
+      ansible.builtin.command:
+        argv: ["{{ qm_binary }}", stop, "{{ vmid | string }}"]
+      when: qm_status_before.rc == 0 and "running" in qm_status_before.stdout
+    - name: Destroy the pinned guest
+      ansible.builtin.command:
+        argv: ["{{ qm_binary }}", destroy, "{{ vmid | string }}"]
+      when: qm_status_before.rc == 0
+    - name: Confirm the pinned guest is absent
+      ansible.builtin.command:
+        argv: ["{{ qm_binary }}", status, "{{ vmid | string }}"]
+      register: qm_status_after
+      failed_when: qm_status_after.rc == 0
+      changed_when: false
+    - name: Record exact destroy result
+      ansible.builtin.copy:
+        content: "{{ {'destroyed': (qm_status_before.rc == 0), 'absent': true} | to_json }}"
+        dest: "{{ result_path }}"
+        mode: '0600'
+      delegate_to: localhost
+      # This is controller-owned evidence consumed by the unprivileged nctl
+      # process after the playbook returns; do not inherit the guest's sudo.
+      become: false
