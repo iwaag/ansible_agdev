@@ -1,0 +1,29 @@
+---
+# devdocs/vision/cluster_agent/p3/plan.md Step 2. This role copies three
+# small files; it deliberately does not generate keys or sign certs — node
+# enrollment stays the p2/plan.md Step 5b manual procedure.
+
+cagent_client_bin_dir: "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+cagent_client_conf_dir: "{{ ansible_facts['env']['HOME'] }}/.cagent"
+
+# The address agpc actually dials in Phase 2 (p2/report5b.md); the server
+# cert's SANs are agstudio.local + 192.168.0.100, so either resolves.
+cagent_client_api_url: "https://agstudio.local:8788"
+
+cagent_client_ca_cert_dest: "{{ cagent_client_conf_dir }}/ca_cert.pem"
+cagent_client_node_cert: "{{ cagent_client_conf_dir }}/node_cert.pem"
+cagent_client_node_key: "{{ cagent_client_conf_dir }}/node_key.pem"
+
+# Public CA certificate on the control machine (repo root's gitignored
+# .local/cagent-ca/, see cagent/README.md). playbook_dir here is
+# ansible_agdev/playbooks/agent, so three levels up is the repo root.
+cagent_client_ca_cert_src: "{{ playbook_dir }}/../../../.local/cagent-ca/ca_cert.pem"
+
+cagent_client_poll_interval: 3
+cagent_client_poll_max: 200
+
+# Same default as opencode_agent_workdir (roles/opencode_agent/defaults/
+# main.yml) — duplicated intentionally rather than cross-role-referenced,
+# since this role owns only the cluster-agent section of AGENTS.md, not the
+# whole node-agent working directory.
+cagent_client_agent_workdir: "{{ ansible_facts['env']['HOME'] }}/agent-work"

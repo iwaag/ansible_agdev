@@ -1,0 +1,63 @@
+---
+- name: Ensure ~/.local/bin exists
+  ansible.builtin.file:
+    path: "{{ cagent_client_bin_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure ~/.cagent exists
+  ansible.builtin.file:
+    path: "{{ cagent_client_conf_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Install the cagent wrapper script
+  ansible.builtin.copy:
+    src: cagent
+    dest: "{{ cagent_client_bin_dir }}/cagent"
+    mode: "0755"
+
+- name: Install the CA certificate
+  ansible.builtin.copy:
+    src: "{{ cagent_client_ca_cert_src }}"
+    dest: "{{ cagent_client_ca_cert_dest }}"
+    mode: "0644"
+
+- name: Template the client config
+  ansible.builtin.template:
+    src: client.conf.j2
+    dest: "{{ cagent_client_conf_dir }}/client.conf"
+    mode: "0600"
+
+- name: Check whether this node is already enrolled
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ cagent_client_node_key }}"
+    - "{{ cagent_client_node_cert }}"
+  register: cagent_client_enrollment_stat
+
+- name: Warn if this node is not yet enrolled
+  ansible.builtin.debug:
+    msg: >-
+      cagent_client installed, but this node has no
+      {{ cagent_client_node_key }} / {{ cagent_client_node_cert }} — it
+      cannot authenticate to the cluster-agent API yet. Enroll it following
+      devdocs/vision/cluster_agent/p2/plan.md Step 5b (generate a key+CSR on
+      this node, sign it bound to this node's DesiredNode UUID, register in
+      the ledger) before using `cagent`.
+  when: cagent_client_enrollment_stat.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
+
+- name: Ensure the node-agent working directory exists
+  ansible.builtin.file:
+    path: "{{ cagent_client_agent_workdir }}"
+    state: directory
+    mode: "0755"
+
+- name: Install the cluster-agent section of the node-agent's AGENTS.md
+  ansible.builtin.blockinfile:
+    path: "{{ cagent_client_agent_workdir }}/AGENTS.md"
+    create: true
+    mode: "0644"
+    marker: "<!-- {mark} cagent_client cluster-agent instructions -->"
+    block: "{{ lookup('file', 'cagent_agents_section.md') }}"

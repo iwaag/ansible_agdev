@@ -1,0 +1,17 @@
+---
+- name: Install the cagent client wrapper, config, and node-agent instructions
+  hosts: node_agent_hosts
+  gather_facts: true
+  become: false
+
+  pre_tasks:
+    - name: Require an explicit target limit
+      ansible.builtin.assert:
+        that:
+          - ansible_limit is defined
+          - ansible_limit | length > 0
+        fail_msg: >-
+          Select an intended node explicitly, for example: --limit agpc.
+
+  roles:
+    - role: cagent_client
