@@ -177,40 +177,6 @@ Send a Wake-on-LAN magic packet from the control node to Linux targets:
 ansible-playbook playbooks/power/wake_linux_hosts.yml --limit <host_or_group>
 ```
 
-Generate Home Assistant `command_line` power switches from inventory:
-
-```bash
-ansible-playbook playbooks/power/generate_home_assistant_power_switches.yml \
-  -e home_assistant_webhook_base_url=http://YOUR_API_HOST:8000 \
-  -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
-```
-
-Generate and deploy the Home Assistant package to `haos_server`:
-
-```bash
-ansible-playbook playbooks/power/deploy_home_assistant_power_switches.yml \
-  -e home_assistant_webhook_base_url=http://YOUR_API_HOST:8000 \
-  -e home_assistant_webhook_token=YOUR_WEBHOOK_TOKEN
-```
-
-## Home Assistant
-
-To load the deployed package from `/config/packages/ansible_power_switches.yaml`, enable packages in Home Assistant's `configuration.yaml`:
-
-```yaml
-homeassistant:
-  packages: !include_dir_named packages
-```
-
-If `homeassistant:` already exists, add only the `packages:` line under it.
-
-After deploying or updating the package:
-
-1. In Developer Tools, run the `command_line.reload` action to reload `command_line` entities.
-2. If this is the first time you enabled packages or the first time Home Assistant sees this YAML, restart Home Assistant once.
-
-The generated file defines `command_line` switches, so the entities should appear after the reload or restart.
-
 ## Notes
 
 - `suspend_hosts.yml` expects the Linux sudoers rule from `configure_suspend_sudo.yml` to already be installed.
@@ -236,6 +202,4 @@ The generated file defines `command_line` switches, so the entities should appea
 - `clone_git_and_run.yml` clones or updates `git_clone_run_repo` into `git_clone_run_dest` (`/tmp/ansible-git-clone-run` by default) and runs `git_clone_run_command` from that directory. Override `git_clone_run_version` to pin a branch, tag, or commit.
 - `wake_hosts.yml` targets `macos:&power_managed` and schedules `pmset` wake two seconds ahead on the selected host.
 - `wake_linux_hosts.yml` uses each selected Linux host's `mac_address` and sends to `255.255.255.255:9`.
-- `generate_home_assistant_power_switches.yml` renders `generated/home_assistant/ansible_power_switches.yaml` for `power_managed` hosts, split into Linux and macOS by the `linux`/`macos` selector groups. State is derived from pinging `local_ip`, `local_dns_hostname`, or `mdns_hostname`, Linux power on uses `POST /webhook/wake/linux`, macOS power on uses `POST /webhook/wake/macos`, Linux power off uses `POST /webhook/suspend/linux`, and macOS power off uses `POST /webhook/sleep/macos`.
-- `deploy_home_assistant_power_switches.yml` renders the same package locally and copies it to `/config/packages/ansible_power_switches.yaml` on hosts in `haos_server`.
 - The default inventory is configured in `ansible.cfg` and points at the generated production inventory `inventories/generated/production.yml`. The bootstrap/collection stage selects `inventories/generated/hosts_intent.yml` explicitly, so production and bootstrap never share an ambiguous default.

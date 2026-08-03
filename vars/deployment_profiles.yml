@@ -68,11 +68,6 @@ deployment_profiles:
         type: string
         required: false
 
-  home_assistant:
-    group: haos_server
-    config_schema_version: "1"
-    variables: {}
-
   nomad_client:
     group: nomad_client
     config_schema_version: "1"
@@ -182,9 +177,6 @@ deployment_profile_reconciliation:
       playbook: playbooks/monitoring/setup_grafana.yml
     dependencies:
       - prometheus
-
-  home_assistant:
-    observe_only: true
 
   nomad_client:
     action:

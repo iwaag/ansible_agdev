@@ -58,8 +58,6 @@ all:
       hosts: {}
     macos:
       hosts: {}
-    haos:
-      hosts: {}
     power_managed:
       hosts: {}
 ```

@@ -164,7 +164,7 @@ them into Nautobot.
 
 The production inventory is the canonical operational artifact, composed from
 desired placements joined with realized actual facts. It contains the flat
-`ssh_hosts` base group; `linux`/`macos`/`haos` selector groups; `power_managed`;
+`ssh_hosts` base group; `linux`/`macos` selector groups; `power_managed`;
 service groups from the Ansible deployment-profile map; and the allowlisted host
 variables (`host_os`, `local_ip`, `mac_address`, `network_interface`,
 connection variables, `power_control`, `ansible_port`, `is_laptop`, and mapped
