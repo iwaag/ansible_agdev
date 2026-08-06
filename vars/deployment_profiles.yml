@@ -209,9 +209,11 @@ deployment_profile_reconciliation:
 
   swarmui:
     observe_only: true
+    install_path: ~/StabilityMatrix/Packages/SwarmUI
 
   comfyui:
     observe_only: true
+    install_path: ~/StabilityMatrix/Packages/ComfyUI
 
 
   node_agent:
