@@ -209,11 +209,19 @@ deployment_profile_reconciliation:
 
   swarmui:
     observe_only: true
-    install_path: ~/StabilityMatrix/Packages/SwarmUI
+    checks:
+      - kind: http
+        paths: ["/"]
+      - kind: file_exists
+        path: "~/StabilityMatrix/Packages/SwarmUI"
 
   comfyui:
     observe_only: true
-    install_path: ~/StabilityMatrix/Packages/ComfyUI
+    checks:
+      - kind: http
+        paths: ["/"]
+      - kind: file_exists
+        path: "~/StabilityMatrix/Packages/ComfyUI"
 
 
   node_agent:
@@ -227,3 +235,6 @@ deployment_profile_reconciliation:
 
   ollama:
     observe_only: true
+    checks:
+      - kind: http
+        paths: ["/v1/models", "/api/tags"]
