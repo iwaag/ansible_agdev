@@ -221,6 +221,8 @@ deployment_profile_reconciliation:
     checks:
       - kind: file_exists
         path_from_config: script_path
+      - kind: cron_registered
+        path_from_config: script_path
 
   swarmui:
     observe_only: true
