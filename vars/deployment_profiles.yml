@@ -134,6 +134,15 @@ deployment_profiles:
     config_schema_version: "1"
     variables: {}
 
+  cron_task:
+    group: cron_task_hosts
+    config_schema_version: "1"
+    variables:
+      script_path:
+        ansible_variable: cron_task_script_path
+        type: string
+        required: true
+
   node_agent:
     group: node_agent_hosts
     config_schema_version: "1"
@@ -206,6 +215,12 @@ deployment_profile_reconciliation:
 
   manual_toolchain:
     observe_only: true
+
+  cron_task:
+    observe_only: true
+    checks:
+      - kind: file_exists
+        path_from_config: script_path
 
   swarmui:
     observe_only: true
