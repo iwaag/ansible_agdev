@@ -1,0 +1,7 @@
+---
+- name: Restart autolab-gateway
+  ansible.builtin.systemd_service:
+    name: autolab-gateway.service
+    scope: user
+    daemon_reload: true
+    state: restarted

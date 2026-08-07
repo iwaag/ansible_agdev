@@ -1,0 +1,14 @@
+[Unit]
+Description=autolab mission gateway (HTTP mission submission, no SSH)
+After=network-online.target
+
+[Service]
+Environment=AUTOLAB_GATEWAY_PORT={{ autolab_node_gateway_port }}
+Environment=PATH={{ autolab_node_service_path }}
+WorkingDirectory={{ autolab_node_repo_dest }}
+ExecStart=/usr/bin/python3 {{ autolab_node_repo_dest }}/agent/gateway.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

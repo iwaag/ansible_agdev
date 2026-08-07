@@ -1,0 +1,84 @@
+---
+- name: Update the agautolab checkout from gitea
+  ansible.builtin.git:
+    repo: "{{ autolab_node_repo_url }}"
+    dest: "{{ autolab_node_repo_dest }}"
+    version: "{{ autolab_node_repo_version }}"
+    update: true
+  register: autolab_node_git
+  notify: Restart autolab-gateway
+
+- name: Ensure agent state directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ autolab_node_state_dir }}"
+    - "{{ autolab_node_state_dir }}/sessions"
+    - "{{ autolab_node_state_dir }}/serve"
+    - "{{ autolab_node_state_dir }}/gateway"
+
+- name: Point the agent at the coding-agent binary
+  ansible.builtin.copy:
+    content: "{{ autolab_node_claude_bin }}\n"
+    dest: "{{ autolab_node_state_dir }}/claude_bin"
+    mode: "0644"
+
+- name: Generate the gateway bearer token when absent
+  ansible.builtin.shell: >-
+    umask 077 &&
+    python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+    > "{{ autolab_node_state_dir }}/gateway_token"
+  args:
+    creates: "{{ autolab_node_state_dir }}/gateway_token"
+
+- name: Read the gateway token
+  ansible.builtin.slurp:
+    src: "{{ autolab_node_state_dir }}/gateway_token"
+  register: autolab_node_token_slurped
+  no_log: true
+
+- name: Ensure the controller-side token directory exists
+  ansible.builtin.file:
+    path: "{{ autolab_node_token_fetch_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+
+- name: Keep a controller-side copy of the token
+  ansible.builtin.copy:
+    content: "{{ autolab_node_token_slurped.content | b64decode }}"
+    dest: "{{ autolab_node_token_fetch_dir }}/{{ inventory_hostname }}.token"
+    mode: "0600"
+  delegate_to: localhost
+  no_log: true
+
+- name: Ensure the systemd user unit directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+
+- name: Install the autolab-gateway systemd user unit
+  ansible.builtin.template:
+    src: autolab-gateway.service.j2
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/autolab-gateway.service"
+    mode: "0644"
+  notify: Restart autolab-gateway
+
+- name: Enable and start the gateway
+  ansible.builtin.systemd_service:
+    name: autolab-gateway.service
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+
+- name: Wait for the gateway health probe
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ autolab_node_gateway_port }}/healthz"
+  register: autolab_node_health
+  retries: 5
+  delay: 2
+  until: autolab_node_health.status == 200
