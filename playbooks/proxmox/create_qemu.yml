@@ -1,0 +1,58 @@
+---
+- name: Create one intent-pinned QEMU guest
+  hosts: all
+  gather_facts: false
+  # Production defaults to root on the Proxmox control node.  The explicit
+  # override is only for the disposable localhost conformance boundary.
+  become: "{{ nctl_compute_become | default(true) }}"
+  vars:
+    # The production default is intentionally absolute.  The variable exists
+    # only so the real-playbook conformance test can supply a disposable stub.
+    qm_binary: /usr/sbin/qm
+  tasks:
+    - name: Refuse an occupied VMID
+      ansible.builtin.command:
+        argv: ["{{ qm_binary }}", status, "{{ vmid | string }}"]
+      register: qm_status
+      failed_when: qm_status.rc == 0
+      changed_when: false
+    - name: Create the pinned guest
+      ansible.builtin.command:
+        argv:
+          - "{{ qm_binary }}"
+          - create
+          - "{{ vmid | string }}"
+          - --name
+          - "{{ hostname }}"
+          - --cores
+          - "{{ vcpus | string }}"
+          - --memory
+          - "{{ memory_mb | string }}"
+          - --scsihw
+          - virtio-scsi-pci
+          - --scsi0
+          - "{{ storage }}:{{ root_disk_gb }}"
+          - --net0
+          - "virtio={{ mac_address }},bridge={{ bridge }}"
+          - --ide2
+          - "{{ template }},media=cdrom"
+          # The empty root disk is not bootable yet, so first boot falls
+          # through to the installer ISO; installed guests boot the disk.
+          - --boot
+          - order=scsi0;ide2
+          - --onboot
+          - "1"
+      when: qm_status.rc != 0
+    - name: Start the created guest
+      ansible.builtin.command:
+        argv: ["{{ qm_binary }}", start, "{{ vmid | string }}"]
+      when: qm_status.rc != 0
+    - name: Record exact successful create result
+      ansible.builtin.copy:
+        content: "{{ {'created': true, 'started': true} | to_json }}"
+        dest: "{{ result_path }}"
+        mode: '0600'
+      delegate_to: localhost
+      # This is controller-owned evidence consumed by the unprivileged nctl
+      # process after the playbook returns; do not inherit the Proxmox sudo.
+      become: false
