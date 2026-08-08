@@ -1,14 +1,14 @@
 ---
 autolab_node_repo_url: http://agstudio.local:3000/autodev/agautolab.git
 autolab_node_repo_version: main
-autolab_node_repo_dest: "{{ ansible_env.HOME }}/agautolab"
+autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"
-autolab_node_claude_bin: "{{ ansible_env.HOME }}/.local/bin/claude"
+autolab_node_claude_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
 autolab_node_gateway_port: 8791
 # PATH for the gateway and everything drive.sh/session.sh spawn under it
 # (claude, uv, node live in user space on the job-runner VM).
 autolab_node_service_path: >-
-  {{ ansible_env.HOME }}/.local/bin:{{ ansible_env.HOME }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
+  {{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
 # Where the controller keeps a copy of each node's gateway bearer token
 # (local-only state on the operator machine, never tracked).
 autolab_node_token_fetch_dir: "{{ lookup('env', 'HOME') }}/.local/state/autolab-gateway"

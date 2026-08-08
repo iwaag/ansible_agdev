@@ -56,14 +56,14 @@
 
 - name: Ensure the systemd user unit directory exists
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.config/systemd/user"
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
     state: directory
     mode: "0755"
 
 - name: Install the autolab-gateway systemd user unit
   ansible.builtin.template:
     src: autolab-gateway.service.j2
-    dest: "{{ ansible_env.HOME }}/.config/systemd/user/autolab-gateway.service"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/autolab-gateway.service"
     mode: "0644"
   notify: Restart autolab-gateway
 
