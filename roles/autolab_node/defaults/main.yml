@@ -1,5 +1,7 @@
 ---
-autolab_node_repo_url: http://agstudio.local:3000/autodev/agautolab.git
+# Node source comes straight from GitHub (public repo, anonymous clone).
+# The agstudio gitea is only for job target repos, never for deploying this node.
+autolab_node_repo_url: https://github.com/iwaag/agautolab.git
 autolab_node_repo_version: main
 autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"

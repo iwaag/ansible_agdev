@@ -1,5 +1,5 @@
 ---
-# Deploy/update the autolab job-runner node: agautolab checkout from gitea
+# Deploy/update the autolab job-runner node: agautolab checkout from GitHub
 # plus the mission gateway (HTTP mission submission — no SSH on the request
 # path). Job-runner VMs are not in the generated production inventory yet
 # (their DesiredNode is waiting_for_manual_initial_access), so runs use the
