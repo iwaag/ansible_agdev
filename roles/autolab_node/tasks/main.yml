@@ -1,5 +1,5 @@
 ---
-- name: Update the agautolab checkout from GitHub
+- name: Update the agautolab checkout from the command-node Gitea
   ansible.builtin.git:
     repo: "{{ autolab_node_repo_url }}"
     dest: "{{ autolab_node_repo_dest }}"
@@ -24,6 +24,28 @@
     content: "{{ autolab_node_claude_bin }}\n"
     dest: "{{ autolab_node_state_dir }}/claude_bin"
     mode: "0644"
+
+- name: Ensure the cagent client directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ autolab_cagent_state_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+
+- name: Install the cagent human-entrance bearer token
+  ansible.builtin.copy:
+    content: "{{ lookup('file', autolab_cagent_token_source) | trim }}\n"
+    dest: "{{ autolab_cagent_state_dir }}/human_token"
+    mode: "0600"
+  no_log: true
+
+- name: Install the autolab cagent client
+  ansible.builtin.template:
+    src: autolab-cagent.py.j2
+    dest: "{{ autolab_cagent_client_path }}"
+    mode: "0755"
 
 - name: Generate the gateway bearer token when absent
   ansible.builtin.shell: >-

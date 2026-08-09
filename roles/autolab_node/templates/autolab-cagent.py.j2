@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""Submit and poll cagent human-entrance requests without enrollment."""
+
+import json
+import os
+from pathlib import Path
+import ssl
+import sys
+import time
+from urllib import error, request
+
+BASE_URL = os.environ.get("CAGENT_URL", "{{ autolab_cagent_url }}").rstrip("/")
+TOKEN_FILE = Path(os.environ.get("CAGENT_TOKEN_FILE", "{{ autolab_cagent_state_dir }}/human_token"))
+TERMINAL_STATES = {"completed", "failed", "cancelled", "interrupted"}
+
+
+def context():
+    if os.environ.get("CAGENT_TLS_VERIFY") == "1":
+        return ssl.create_default_context()
+    return ssl._create_unverified_context()
+
+
+def call(method, path, payload=None):
+    token = TOKEN_FILE.read_text(encoding="utf-8").strip()
+    if not token:
+        raise RuntimeError(f"empty cagent token file: {TOKEN_FILE}")
+    body = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = request.Request(
+        f"{BASE_URL}{path}",
+        data=body,
+        method=method,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    )
+    try:
+        with request.urlopen(req, context=context(), timeout=30) as response:
+            return json.load(response)
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"cagent HTTP {exc.code}: {detail}") from exc
+
+
+def message_from_args(args):
+    if args and args != ["-"]:
+        return " ".join(args).strip()
+    return sys.stdin.read().strip()
+
+
+def submit(message):
+    if not message:
+        raise RuntimeError("request message must not be empty")
+    return call("POST", "/requests", {"message": message})
+
+
+def wait_for(request_id):
+    deadline = time.monotonic() + int(os.environ.get("CAGENT_DEADLINE_SECONDS", "420"))
+    interval = int(os.environ.get("CAGENT_POLL_SECONDS", "5"))
+    while True:
+        result = call("GET", f"/requests/{request_id}")
+        if result.get("state") in TERMINAL_STATES:
+            return result
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f"timed out waiting for cagent request {request_id}")
+        time.sleep(interval)
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in {"submit", "get", "wait", "ask"}:
+        raise RuntimeError("usage: autolab-cagent submit MESSAGE | get ID | wait ID | ask MESSAGE")
+    command, args = sys.argv[1], sys.argv[2:]
+    if command == "submit":
+        result = submit(message_from_args(args))
+    elif command == "get":
+        if len(args) != 1:
+            raise RuntimeError("get requires one request ID")
+        result = call("GET", f"/requests/{args[0]}")
+    elif command == "wait":
+        if len(args) != 1:
+            raise RuntimeError("wait requires one request ID")
+        result = wait_for(args[0])
+    else:
+        created = submit(message_from_args(args))
+        result = wait_for(created["request_id"])
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("state") not in {"failed", "cancelled", "interrupted"} else 1
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1) from exc

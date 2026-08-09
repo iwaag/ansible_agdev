@@ -1,7 +1,6 @@
 ---
-# Node source comes straight from GitHub (public repo, anonymous clone).
-# The agstudio gitea is only for job target repos, never for deploying this node.
-autolab_node_repo_url: https://github.com/iwaag/agautolab.git
+# The command-node Gitea is the deployment source used by autolab nodes.
+autolab_node_repo_url: http://agstudio.local:3000/autodev/agautolab.git
 autolab_node_repo_version: main
 autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"
@@ -14,3 +13,8 @@ autolab_node_service_path: >-
 # Where the controller keeps a copy of each node's gateway bearer token
 # (local-only state on the operator machine, never tracked).
 autolab_node_token_fetch_dir: "{{ lookup('env', 'HOME') }}/.local/state/autolab-gateway"
+# Human-entrance cagent credentials stay local on the controller and node.
+autolab_cagent_url: https://agstudio.local:8789
+autolab_cagent_token_source: "{{ lookup('env', 'HOME') }}/.local/state/cagent/human_token"
+autolab_cagent_state_dir: "{{ ansible_facts['env']['HOME'] }}/.local/state/cagent"
+autolab_cagent_client_path: "{{ ansible_facts['env']['HOME'] }}/.local/bin/autolab-cagent"

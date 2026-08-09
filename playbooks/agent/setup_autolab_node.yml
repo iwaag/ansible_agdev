@@ -1,9 +1,9 @@
 ---
 # Deploy/update the autolab job-runner node: agautolab checkout from GitHub
 # plus the mission gateway (HTTP mission submission — no SSH on the request
-# path). Job-runner VMs are not in the generated production inventory yet
-# (their DesiredNode is waiting_for_manual_initial_access), so runs use the
-# local-only static inventory:
+# path). This bootstrap/update playbook intentionally keeps using its small
+# static inventory so a broken production render cannot strand the agent
+# maintenance path:
 #
 #   ansible-playbook -i inventories/agautolab.yml playbooks/agent/setup_autolab_node.yml
 #
