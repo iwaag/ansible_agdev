@@ -1,0 +1,8 @@
+---
+- name: Serve nctl-managed static web applications on Linux
+  hosts: "static_web_app_hosts:&linux"
+  gather_facts: true
+  become: false
+
+  roles:
+    - role: static_web_app

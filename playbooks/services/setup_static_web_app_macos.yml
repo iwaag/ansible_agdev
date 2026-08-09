@@ -1,0 +1,8 @@
+---
+- name: Serve nctl-managed static web applications on macOS
+  hosts: "static_web_app_hosts:&macos"
+  gather_facts: true
+  become: false
+
+  roles:
+    - role: static_web_app

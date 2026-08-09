@@ -1,0 +1,4 @@
+---
+static_web_app_root: "{{ ansible_facts['env']['HOME'] }}/.local/share/nctl/static-web-app"
+static_web_app_state_root: "{{ ansible_facts['env']['HOME'] }}/.local/state/nctl/static-web-app"
+static_web_app_instances: []

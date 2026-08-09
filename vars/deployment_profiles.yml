@@ -171,6 +171,28 @@ deployment_profiles:
         type: string
         required: false
 
+  static_web_app:
+    group: static_web_app_hosts
+    config_schema_version: "1"
+    placement_list_variable: static_web_app_instances
+    variables:
+      repo_url:
+        ansible_variable: static_web_app_repo_url
+        type: string
+        required: true
+      repo_version:
+        ansible_variable: static_web_app_repo_version
+        type: string
+        required: false
+      port:
+        ansible_variable: static_web_app_port
+        type: integer
+        required: true
+      run_state:
+        ansible_variable: static_web_app_run_state
+        type: string
+        required: false
+
 deployment_profile_reconciliation:
   dnsmasq:
     action:
@@ -239,6 +261,17 @@ deployment_profile_reconciliation:
         paths: ["/"]
       - kind: file_exists
         path: "~/StabilityMatrix/Packages/ComfyUI"
+
+  static_web_app:
+    action:
+      kind: playbook
+      playbook_by_os:
+        linux: playbooks/services/setup_static_web_app.yml
+        macos: playbooks/services/setup_static_web_app_macos.yml
+    checks:
+      - kind: http
+        paths: ["/"]
+    run_state_from_config: run_state
 
 
   node_agent:
