@@ -193,6 +193,27 @@ deployment_profiles:
         type: string
         required: false
 
+  autolab_node:
+    group: autolab_nodes
+    config_schema_version: "1"
+    variables:
+      repo_url:
+        ansible_variable: autolab_node_repo_url
+        type: string
+        required: true
+      repo_version:
+        ansible_variable: autolab_node_repo_version
+        type: string
+        required: false
+      repo_dest:
+        ansible_variable: autolab_node_repo_dest
+        type: string
+        required: true
+      gateway_port:
+        ansible_variable: autolab_node_gateway_port
+        type: integer
+        required: true
+
 deployment_profile_reconciliation:
   dnsmasq:
     action:
@@ -272,6 +293,16 @@ deployment_profile_reconciliation:
       - kind: http
         paths: ["/"]
     run_state_from_config: run_state
+
+  autolab_node:
+    action:
+      kind: playbook
+      playbook: playbooks/agent/setup_autolab_node.yml
+    checks:
+      - kind: file_exists
+        path_from_config: repo_dest
+      - kind: http
+        paths: ["/healthz"]
 
 
   node_agent:
