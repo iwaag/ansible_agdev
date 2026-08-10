@@ -16,9 +16,6 @@ autolab_node_ollama_url: http://agstudio.local:11434
 # (claude, uv, node live in user space on the job-runner VM).
 autolab_node_service_path: >-
   {{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
-# Where the controller keeps a copy of each node's gateway bearer token
-# (local-only state on the operator machine, never tracked).
-autolab_node_token_fetch_dir: "{{ lookup('env', 'HOME') }}/.local/state/autolab-gateway"
 # Human-entrance cagent credentials stay local on the controller and node.
 autolab_cagent_url: https://agstudio.local:8789
 autolab_cagent_token_source: "{{ lookup('env', 'HOME') }}/.local/state/cagent/human_token"

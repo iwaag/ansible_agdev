@@ -47,34 +47,10 @@
     dest: "{{ autolab_cagent_client_path }}"
     mode: "0755"
 
-- name: Generate the gateway bearer token when absent
-  ansible.builtin.shell: >-
-    umask 077 &&
-    python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
-    > "{{ autolab_node_state_dir }}/gateway_token"
-  args:
-    creates: "{{ autolab_node_state_dir }}/gateway_token"
-
-- name: Read the gateway token
-  ansible.builtin.slurp:
-    src: "{{ autolab_node_state_dir }}/gateway_token"
-  register: autolab_node_token_slurped
-  no_log: true
-
-- name: Ensure the controller-side token directory exists
+- name: Retire the gateway bearer token (zero_auth episode)
   ansible.builtin.file:
-    path: "{{ autolab_node_token_fetch_dir }}"
-    state: directory
-    mode: "0700"
-  delegate_to: localhost
-
-- name: Keep a controller-side copy of the token
-  ansible.builtin.copy:
-    content: "{{ autolab_node_token_slurped.content | b64decode }}"
-    dest: "{{ autolab_node_token_fetch_dir }}/{{ inventory_hostname }}.token"
-    mode: "0600"
-  delegate_to: localhost
-  no_log: true
+    path: "{{ autolab_node_state_dir }}/gateway_token"
+    state: absent
 
 - name: Ensure the systemd user unit directory exists
   ansible.builtin.file:
