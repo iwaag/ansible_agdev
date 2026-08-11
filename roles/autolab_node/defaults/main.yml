@@ -25,7 +25,7 @@ autolab_node_plane_config_file: "{{ autolab_node_repo_dest }}/.local/plane.env"
 # PATH for the gateway and everything drive.sh/session.sh spawn under it
 # (claude, uv, node live in user space on the job-runner VM).
 autolab_node_service_path: >-
-  {{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
+  {{ autolab_node_repo_dest }}/.venv/bin:{{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
 # Human-entrance cagent credentials stay local on the controller and node.
 autolab_cagent_url: https://agstudio.local:8789
 autolab_cagent_token_source: "{{ lookup('env', 'HOME') }}/.local/state/cagent/human_token"
