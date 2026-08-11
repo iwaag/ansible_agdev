@@ -6,7 +6,7 @@ After=network-online.target
 Environment=AUTOLAB_GATEWAY_PORT={{ autolab_node_gateway_port }}
 Environment=PATH={{ autolab_node_service_path }}
 WorkingDirectory={{ autolab_node_repo_dest }}
-ExecStart=/usr/bin/python3 {{ autolab_node_repo_dest }}/agent/gateway.py
+ExecStart={{ autolab_node_repo_dest }}/.venv/bin/python {{ autolab_node_repo_dest }}/agent/gateway.py
 Restart=on-failure
 RestartSec=5
 

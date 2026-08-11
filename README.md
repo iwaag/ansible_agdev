@@ -13,7 +13,8 @@ fixture cleanup ownership.
 
 `playbooks/agent/setup_autolab_node.yml` installs pinned OpenCode and Claude
 Code CLIs in the target user's home, updates the agautolab checkout, generates
-its `.local/agents.local.toml`, and starts the user-scoped gateway. It uses
+its locked runtime environment and `.local/agents.local.toml`, and starts the
+user-scoped gateway. It uses
 OpenCode in install-only mode: an autolab node does not receive the unrelated
 `:4096` daemon. Run it from the production inventory after rendering current
 Nautobot placement intent:

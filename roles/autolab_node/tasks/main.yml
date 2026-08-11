@@ -20,6 +20,21 @@
     - "{{ autolab_node_state_dir }}/gateway"
     - "{{ autolab_node_repo_dest }}/.local"
 
+- name: Synchronize the locked agautolab runtime dependencies
+  ansible.builtin.command:
+    argv:
+      - "{{ autolab_node_uv_command }}"
+      - sync
+      - --frozen
+      - --no-dev
+    chdir: "{{ autolab_node_repo_dest }}"
+  register: autolab_node_uv_sync
+  changed_when: >-
+    'Installed ' in autolab_node_uv_sync.stderr or
+    'Updated ' in autolab_node_uv_sync.stderr or
+    'Removed ' in autolab_node_uv_sync.stderr
+  notify: Restart autolab-gateway
+
 - name: Require the intent-supplied OpenAI-compatible Ollama endpoint
   ansible.builtin.assert:
     that:
@@ -107,6 +122,9 @@
     daemon_reload: true
     enabled: true
     state: started
+
+- name: Apply pending gateway changes before verification
+  ansible.builtin.meta: flush_handlers
 
 - name: Wait for the gateway health probe
   ansible.builtin.uri:
