@@ -1,11 +1,11 @@
 ---
 # Deploy/update the autolab job-runner node: agautolab checkout from GitHub
 # plus the mission gateway (HTTP mission submission — no SSH on the request
-# path). This bootstrap/update playbook intentionally keeps using its small
-# static inventory so a broken production render cannot strand the agent
-# maintenance path:
+# path). Use the rendered production inventory so placement-supplied provider
+# and profile values reach the role:
 #
-#   ansible-playbook -i inventories/agautolab.yml playbooks/agent/setup_autolab_node.yml
+#   ansible-playbook -i inventories/generated/production.yml \
+#     playbooks/agent/setup_autolab_node.yml --limit agautolab1
 #
 - name: Install and update the autolab job-runner node
   hosts: autolab_nodes

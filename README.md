@@ -37,6 +37,19 @@ ignored project `.local/secrets/` directory, while the overlay contains only
 an `anthropic_api_key_file` path reference. Never put the value in placement
 config, inventory, defaults, or an agents file.
 
+Plane task reporting is also deployment-local. Point
+`AUTOLAB_NODE_PLANE_CREDENTIALS_SOURCE` at a controller-only properties/env
+file containing the agent key, workspace/project values, and state IDs before
+running the playbook. The `autolab_node` role selects only those Plane values
+and writes `.local/plane.env` mode 0600 on the node; unrelated credentials in
+the source bundle are not copied. For example:
+
+```bash
+AUTOLAB_NODE_PLANE_CREDENTIALS_SOURCE=/path/to/ignored/plane-credentials.env \
+  ansible-playbook -i inventories/agautolab.yml \
+  playbooks/agent/setup_autolab_node.yml
+```
+
 `playbooks/proxmox/create_lxc.yml` is nctl's bounded compute-create adapter. It is not a
 standalone lifecycle tool: nctl supplies the preflight-pinned VMID, template, storage, bridge,
 resource, and MAC values, and the playbook performs only status, create, and start for that one

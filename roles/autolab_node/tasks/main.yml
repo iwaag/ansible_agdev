@@ -52,6 +52,14 @@
   no_log: true
   when: autolab_node_anthropic_api_key_source | length > 0
 
+- name: Provision the Plane agent project configuration
+  ansible.builtin.template:
+    src: plane.env.j2
+    dest: "{{ autolab_node_plane_config_file }}"
+    mode: "0600"
+  no_log: true
+  when: autolab_node_plane_credentials_source | length > 0
+
 - name: Ensure the cagent client directories exist
   ansible.builtin.file:
     path: "{{ item }}"
