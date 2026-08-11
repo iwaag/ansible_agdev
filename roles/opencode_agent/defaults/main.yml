@@ -17,6 +17,7 @@ opencode_agent_archives:
     sha256: 41ae3041e91b894e4c0dc06a73a9a2796254bf390ffb99626a43af5e2912d170
 
 opencode_agent_user: "{{ ansible_user | default('eiji') }}"
+opencode_agent_serve: true
 opencode_agent_port: 4096
 opencode_agent_listen: 127.0.0.1
 opencode_agent_workdir: "{{ ansible_facts['env']['HOME'] }}/agent-work"

@@ -4,11 +4,6 @@ After=network-online.target
 
 [Service]
 Environment=AUTOLAB_GATEWAY_PORT={{ autolab_node_gateway_port }}
-Environment=AUTOLAB_WINDOW_BACKEND={{ autolab_node_window_backend }}
-Environment=AUTOLAB_OLLAMA_URL={{ autolab_node_ollama_url }}
-{% if autolab_node_window_model %}
-Environment=AUTOLAB_WINDOW_MODEL={{ autolab_node_window_model }}
-{% endif %}
 Environment=PATH={{ autolab_node_service_path }}
 WorkingDirectory={{ autolab_node_repo_dest }}
 ExecStart=/usr/bin/python3 {{ autolab_node_repo_dest }}/agent/gateway.py

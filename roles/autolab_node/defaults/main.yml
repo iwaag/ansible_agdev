@@ -4,14 +4,19 @@ autolab_node_repo_url: http://agstudio.local:3000/autodev/agautolab.git
 autolab_node_repo_version: main
 autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"
-autolab_node_claude_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
 autolab_node_gateway_port: 8791
-# The conversational window's backend (devpolicy/policy.md, Agent != Model).
-# A job-runner VM has no local ollama, so unlike the developer machine it must
-# be told where one lives; the command node's is the obvious answer.
-autolab_node_window_backend: ollama
-autolab_node_window_model: ""
-autolab_node_ollama_url: http://agstudio.local:11434
+autolab_node_provider_ollama_base_url: ""
+autolab_node_opencode_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/opencode"
+autolab_node_claude_code_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
+autolab_node_front_profile: ""
+autolab_node_director_profile: ""
+autolab_node_mediator_profile: ""
+autolab_node_coding_profile: ""
+autolab_node_summarizer_profile: ""
+# Optional controller-local key input. The value is copied only to an ignored,
+# mode-0600 node file; the generated agent overlay contains the path reference.
+autolab_node_anthropic_api_key_source: ""
+autolab_node_anthropic_api_key_file: "{{ autolab_node_repo_dest }}/.local/secrets/anthropic_api_key"
 # PATH for the gateway and everything drive.sh/session.sh spawn under it
 # (claude, uv, node live in user space on the job-runner VM).
 autolab_node_service_path: >-

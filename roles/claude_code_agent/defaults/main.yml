@@ -1,0 +1,6 @@
+---
+claude_code_agent_version: "2.1.226"
+claude_code_agent_home: "{{ ansible_facts['env']['HOME'] }}"
+claude_code_agent_npm: "{{ ansible_facts['env']['HOME'] }}/.local/node/bin/npm"
+claude_code_agent_prefix: "{{ ansible_facts['env']['HOME'] }}/.local/node"
+claude_code_agent_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"

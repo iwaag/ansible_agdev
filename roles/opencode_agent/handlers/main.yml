@@ -1,4 +1,6 @@
 ---
 - name: restart opencode agent
   ansible.builtin.include_tasks: "restart_{{ ansible_facts['system'] | lower }}.yml"
-  when: not ansible_check_mode
+  when:
+    - opencode_agent_serve | bool
+    - not ansible_check_mode

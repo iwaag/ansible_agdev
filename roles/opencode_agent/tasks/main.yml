@@ -80,12 +80,14 @@
     path: "{{ opencode_agent_config_dir }}"
     state: directory
     mode: "0700"
+  when: opencode_agent_serve | bool
 
 - name: Create the OpenCode working directory
   ansible.builtin.file:
     path: "{{ opencode_agent_workdir }}"
     state: directory
     mode: "0755"
+  when: opencode_agent_serve | bool
 
 - name: Configure OpenCode
   ansible.builtin.template:
@@ -93,14 +95,19 @@
     dest: "{{ opencode_agent_config_dir }}/opencode.json"
     mode: "0600"
   notify: restart opencode agent
+  when: opencode_agent_serve | bool
 
 - name: Install the platform service
   ansible.builtin.include_tasks: "service_{{ ansible_facts['system'] | lower }}.yml"
-  when: not ansible_check_mode
+  when:
+    - opencode_agent_serve | bool
+    - not ansible_check_mode
 
 - name: Apply pending OpenCode service changes
   ansible.builtin.meta: flush_handlers
-  when: not ansible_check_mode
+  when:
+    - opencode_agent_serve | bool
+    - not ansible_check_mode
 
 - name: Verify the OpenCode service health endpoint
   ansible.builtin.uri:
@@ -111,4 +118,6 @@
   retries: 10
   delay: 1
   until: opencode_agent_health.status == 200
-  when: not ansible_check_mode
+  when:
+    - opencode_agent_serve | bool
+    - not ansible_check_mode

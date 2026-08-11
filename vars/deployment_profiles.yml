@@ -213,6 +213,30 @@ deployment_profiles:
         ansible_variable: autolab_node_gateway_port
         type: integer
         required: true
+      provider_ollama_base_url:
+        ansible_variable: autolab_node_provider_ollama_base_url
+        type: string
+        required: true
+      front_profile:
+        ansible_variable: autolab_node_front_profile
+        type: string
+        required: false
+      director_profile:
+        ansible_variable: autolab_node_director_profile
+        type: string
+        required: false
+      mediator_profile:
+        ansible_variable: autolab_node_mediator_profile
+        type: string
+        required: false
+      coding_profile:
+        ansible_variable: autolab_node_coding_profile
+        type: string
+        required: false
+      summarizer_profile:
+        ansible_variable: autolab_node_summarizer_profile
+        type: string
+        required: false
 
 deployment_profile_reconciliation:
   dnsmasq:

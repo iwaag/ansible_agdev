@@ -9,6 +9,34 @@ fixture cleanup ownership.
 
 ## Playbooks
 
+### Standard agent runtimes and autolab nodes
+
+`playbooks/agent/setup_autolab_node.yml` installs pinned OpenCode and Claude
+Code CLIs in the target user's home, updates the agautolab checkout, generates
+its `.local/agents.local.toml`, and starts the user-scoped gateway. It uses
+OpenCode in install-only mode: an autolab node does not receive the unrelated
+`:4096` daemon. Run it from the production inventory after rendering current
+Nautobot placement intent:
+
+```bash
+uv run --project ../nctl nctl render production --out inventories/generated
+ansible-playbook -i inventories/generated/production.yml \
+  playbooks/agent/setup_autolab_node.yml --limit agautolab1
+```
+
+The `autolab_node` deployment profile in `vars/deployment_profiles.yml` maps
+placement config to the provider `/v1` endpoint and optional role/profile
+overrides. Do not hand-edit the generated node overlay. OpenCode 1.18.10 and
+Claude Code 2.1.226 are pinned by their roles; selecting an unavailable or
+unauthenticated harness fails rather than falling back.
+
+Anthropic authentication is optional and deployment-local. Set
+`autolab_node_anthropic_api_key_source` to a controller-local secret file via
+vault/local extra vars when deploying. Ansible copies it mode 0600 under the
+ignored project `.local/secrets/` directory, while the overlay contains only
+an `anthropic_api_key_file` path reference. Never put the value in placement
+config, inventory, defaults, or an agents file.
+
 `playbooks/proxmox/create_lxc.yml` is nctl's bounded compute-create adapter. It is not a
 standalone lifecycle tool: nctl supplies the preflight-pinned VMID, template, storage, bridge,
 resource, and MAC values, and the playbook performs only status, create, and start for that one

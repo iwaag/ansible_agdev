@@ -1,0 +1,50 @@
+---
+- name: Check the user-scoped npm executable
+  ansible.builtin.stat:
+    path: "{{ claude_code_agent_npm }}"
+  register: claude_code_agent_npm_stat
+
+- name: Require the existing user-scoped Node.js toolchain
+  ansible.builtin.assert:
+    that: claude_code_agent_npm_stat.stat.executable | default(false)
+    fail_msg: >-
+      Claude Code needs the user-scoped npm executable at
+      {{ claude_code_agent_npm }}; install the node baseline first.
+
+- name: Check the installed Claude Code version
+  ansible.builtin.command: "{{ claude_code_agent_bin }} --version"
+  register: claude_code_agent_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Install the pinned Claude Code CLI in the user-scoped Node prefix
+  ansible.builtin.command:
+    argv:
+      - "{{ claude_code_agent_npm }}"
+      - install
+      - --global
+      - --prefix
+      - "{{ claude_code_agent_prefix }}"
+      - "@anthropic-ai/claude-code@{{ claude_code_agent_version }}"
+      - --no-audit
+      - --no-fund
+  when:
+    - not ansible_check_mode
+    - >-
+      claude_code_agent_installed_version.rc != 0 or
+      claude_code_agent_version not in claude_code_agent_installed_version.stdout
+  changed_when: true
+
+- name: Ensure the shared local binary directory exists
+  ansible.builtin.file:
+    path: "{{ claude_code_agent_bin | dirname }}"
+    state: directory
+    mode: "0700"
+
+- name: Link the pinned Claude Code executable into the shared local path
+  ansible.builtin.file:
+    src: "{{ claude_code_agent_prefix }}/bin/claude"
+    dest: "{{ claude_code_agent_bin }}"
+    state: link
+    force: true
+  when: not ansible_check_mode

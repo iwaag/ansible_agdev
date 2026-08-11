@@ -1,0 +1,23 @@
+schema = "ag.agent-config.v1"
+
+[local.harness.opencode]
+command = {{ autolab_node_opencode_command | to_json }}
+
+[local.harness.claude_code]
+command = {{ autolab_node_claude_code_command | to_json }}
+
+[local.provider.ollama]
+base_url = {{ autolab_node_provider_ollama_base_url | to_json }}
+{% if autolab_node_anthropic_api_key_source | length > 0 %}
+
+[local.secrets]
+anthropic_api_key_file = {{ autolab_node_anthropic_api_key_file | to_json }}
+{% endif %}
+{% for role in ['front', 'director', 'mediator', 'coding', 'summarizer'] %}
+{% set profile = lookup('vars', 'autolab_node_' ~ role ~ '_profile') %}
+{% if profile | length > 0 %}
+
+[roles.{{ role }}]
+profile = {{ profile | to_json }}
+{% endif %}
+{% endfor %}

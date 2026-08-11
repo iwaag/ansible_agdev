@@ -18,12 +18,39 @@
     - "{{ autolab_node_state_dir }}/sessions"
     - "{{ autolab_node_state_dir }}/serve"
     - "{{ autolab_node_state_dir }}/gateway"
+    - "{{ autolab_node_repo_dest }}/.local"
 
-- name: Point the agent at the coding-agent binary
+- name: Require the intent-supplied OpenAI-compatible Ollama endpoint
+  ansible.builtin.assert:
+    that:
+      - autolab_node_provider_ollama_base_url is string
+      - autolab_node_provider_ollama_base_url | length > 0
+      - autolab_node_provider_ollama_base_url is regex('/v1/?$')
+    fail_msg: >-
+      autolab_node_provider_ollama_base_url must come from placement intent
+      and end in /v1.
+
+- name: Generate the deployment-local agent overlay
+  ansible.builtin.template:
+    src: agents.local.toml.j2
+    dest: "{{ autolab_node_repo_dest }}/.local/agents.local.toml"
+    mode: "0600"
+  notify: Restart autolab-gateway
+
+- name: Ensure the optional local secret directory exists
+  ansible.builtin.file:
+    path: "{{ autolab_node_anthropic_api_key_file | dirname }}"
+    state: directory
+    mode: "0700"
+  when: autolab_node_anthropic_api_key_source | length > 0
+
+- name: Provision the optional Anthropic API key file
   ansible.builtin.copy:
-    content: "{{ autolab_node_claude_bin }}\n"
-    dest: "{{ autolab_node_state_dir }}/claude_bin"
-    mode: "0644"
+    src: "{{ autolab_node_anthropic_api_key_source }}"
+    dest: "{{ autolab_node_anthropic_api_key_file }}"
+    mode: "0600"
+  no_log: true
+  when: autolab_node_anthropic_api_key_source | length > 0
 
 - name: Ensure the cagent client directories exist
   ansible.builtin.file:

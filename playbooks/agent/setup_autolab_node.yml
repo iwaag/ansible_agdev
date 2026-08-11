@@ -13,4 +13,7 @@
   become: false
 
   roles:
+    - role: opencode_agent
+      opencode_agent_serve: false
+    - role: claude_code_agent
     - role: autolab_node
