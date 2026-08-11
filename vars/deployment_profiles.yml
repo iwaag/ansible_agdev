@@ -132,7 +132,16 @@ deployment_profiles:
   manual_toolchain:
     group: manual_toolchains
     config_schema_version: "1"
-    variables: {}
+    placement_list_variable: manual_toolchain_instances
+    variables:
+      process:
+        ansible_variable: manual_toolchain_process
+        type: string
+        required: false
+      process_pattern:
+        ansible_variable: manual_toolchain_process_pattern
+        type: string
+        required: false
 
   cron_task:
     group: cron_task_hosts
