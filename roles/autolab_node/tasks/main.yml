@@ -75,6 +75,14 @@
   no_log: true
   when: autolab_node_plane_credentials_source | length > 0
 
+- name: Provision the Zulip bot configuration
+  ansible.builtin.copy:
+    src: "{{ autolab_node_zulip_credentials_source }}"
+    dest: "{{ autolab_node_zulip_config_file }}"
+    mode: "0600"
+  no_log: true
+  when: autolab_node_zulip_credentials_source | length > 0
+
 - name: Ensure the cagent client directories exist
   ansible.builtin.file:
     path: "{{ item }}"

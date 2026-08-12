@@ -51,6 +51,17 @@ AUTOLAB_NODE_PLANE_CREDENTIALS_SOURCE=/path/to/ignored/plane-credentials.env \
   playbooks/agent/setup_autolab_node.yml
 ```
 
+Zulip participation credentials follow the same controller-local pattern.
+Point `AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE` at the ignored env file for the
+target node. The role copies it to `.local/zulip.env` with mode 0600; the
+credential is not placement intent and must not be put in generated inventory:
+
+```bash
+AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE=/path/to/ignored/autolab-node.env \
+  ansible-playbook -i inventories/generated/production.yml \
+  playbooks/agent/setup_autolab_node.yml --limit agautolab1
+```
+
 `playbooks/proxmox/create_lxc.yml` is nctl's bounded compute-create adapter. It is not a
 standalone lifecycle tool: nctl supplies the preflight-pinned VMID, template, storage, bridge,
 resource, and MAC values, and the playbook performs only status, create, and start for that one

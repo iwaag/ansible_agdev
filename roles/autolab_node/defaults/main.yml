@@ -22,6 +22,10 @@ autolab_node_anthropic_api_key_file: "{{ autolab_node_repo_dest }}/.local/secret
 # the agent API and project/state values selected by plane.env.j2.
 autolab_node_plane_credentials_source: "{{ lookup('ansible.builtin.env', 'AUTOLAB_NODE_PLANE_CREDENTIALS_SOURCE') }}"
 autolab_node_plane_config_file: "{{ autolab_node_repo_dest }}/.local/plane.env"
+# Optional controller-local Zulip bot credential bundle. It contains only the
+# node's URL, API email, and API key and remains in ignored local state.
+autolab_node_zulip_credentials_source: "{{ lookup('ansible.builtin.env', 'AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE') }}"
+autolab_node_zulip_config_file: "{{ autolab_node_repo_dest }}/.local/zulip.env"
 # PATH for the gateway and everything drive.sh/session.sh spawn under it
 # (claude, uv, node live in user space on the job-runner VM).
 autolab_node_service_path: >-
