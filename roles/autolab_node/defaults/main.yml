@@ -1,6 +1,10 @@
 ---
-# The command-node Gitea is the deployment source used by autolab nodes.
-autolab_node_repo_url: http://agstudio.local:3000/autodev/agautolab.git
+# GitHub is the deployment source for autolab nodes. Do not point this back at
+# the command-node Gitea: that mirror goes stale silently (it sat two commits
+# behind through the whole discard_garbage episode, and a stale mirror once
+# redeployed a superseded implementation over a current one), and the node has
+# no credential need for the public GitHub repository.
+autolab_node_repo_url: https://github.com/iwaag/agautolab.git
 autolab_node_repo_version: main
 autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"
