@@ -45,3 +45,23 @@
     daemon_reload: true
     enabled: true
     state: started
+
+# LAN DNS is IPv4 dnsmasq (192.168.0.2). Router IPv6 RDNSS otherwise injects a
+# public DNS server that cannot resolve home.arpa (first hit: agpc, 2026-08-12;
+# latent on any dual-stack netplan node). Nodes here do not need IPv6.
+- name: Check for netplan
+  ansible.builtin.stat:
+    path: /etc/netplan
+  register: common_linux_netplan_dir
+
+- name: Disable IPv6 router advertisements on the primary interface (netplan)
+  ansible.builtin.template:
+    src: netplan-disable-ipv6-ra.yaml.j2
+    dest: /etc/netplan/99-disable-ipv6-ra.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    common_linux_ipv6_ra_interface: "{{ ansible_default_ipv4.interface }}"
+  when: common_linux_netplan_dir.stat.isdir | default(false)
+  notify: Apply netplan

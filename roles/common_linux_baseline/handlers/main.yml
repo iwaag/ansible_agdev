@@ -3,3 +3,6 @@
   ansible.builtin.systemd:
     name: systemd-logind
     state: restarted
+
+- name: Apply netplan
+  ansible.builtin.command: netplan apply
