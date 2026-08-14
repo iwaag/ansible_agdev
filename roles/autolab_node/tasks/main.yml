@@ -1,5 +1,5 @@
 ---
-- name: Update the agautolab checkout from the command-node Gitea
+- name: Update the agautolab checkout from GitHub
   ansible.builtin.git:
     repo: "{{ autolab_node_repo_url }}"
     dest: "{{ autolab_node_repo_dest }}"
