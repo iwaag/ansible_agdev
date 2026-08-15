@@ -152,11 +152,6 @@ deployment_profiles:
         type: string
         required: true
 
-  node_agent:
-    group: node_agent_hosts
-    config_schema_version: "1"
-    variables: {}
-
   ollama:
     group: ollama_server
     config_schema_version: "1"
@@ -338,14 +333,6 @@ deployment_profile_reconciliation:
         paths: ["/healthz"]
 
 
-  node_agent:
-    action:
-      kind: playbook
-      playbook: playbooks/agent/setup_opencode.yml
-      bindings:
-        llm_provider:
-          config_file: ~/.config/opencode/opencode.json
-          json_path: provider.ollama.options.baseURL
 
   ollama:
     observe_only: true
