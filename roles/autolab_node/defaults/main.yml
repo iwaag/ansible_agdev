@@ -10,7 +10,6 @@ autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"
 autolab_node_gateway_port: 8791
 autolab_node_provider_ollama_base_url: ""
-autolab_node_opencode_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/opencode"
 autolab_node_claude_code_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
 autolab_node_uv_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/uv"
 autolab_node_front_profile: ""

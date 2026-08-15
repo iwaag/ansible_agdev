@@ -22,8 +22,7 @@ cagent_client_ca_cert_src: "{{ playbook_dir }}/../../../.local/cagent-ca/ca_cert
 cagent_client_poll_interval: 3
 cagent_client_poll_max: 200
 
-# Same default as opencode_agent_workdir (roles/opencode_agent/defaults/
-# main.yml) — duplicated intentionally rather than cross-role-referenced,
-# since this role owns only the cluster-agent section of AGENTS.md, not the
-# whole node-agent working directory.
+# The node-agent working directory, kept as this role's own default rather
+# than cross-role-referenced: this role owns only the cluster-agent section
+# of AGENTS.md, not the whole directory.
 cagent_client_agent_workdir: "{{ ansible_facts['env']['HOME'] }}/agent-work"

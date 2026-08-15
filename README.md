@@ -11,13 +11,13 @@ fixture cleanup ownership.
 
 ### Standard agent runtimes and autolab nodes
 
-`playbooks/agent/setup_autolab_node.yml` installs pinned OpenCode and Claude
-Code CLIs in the target user's home, updates the agautolab checkout, generates
-its locked runtime environment and `.local/agents.local.toml`, and starts the
-user-scoped gateway. It uses
-OpenCode in install-only mode: an autolab node does not receive the unrelated
-`:4096` daemon. Run it from the production inventory after rendering current
-Nautobot placement intent:
+`playbooks/agent/setup_autolab_node.yml` installs the pinned Claude Code CLI
+in the target user's home, updates the agautolab checkout, generates its
+locked runtime environment and `.local/agents.local.toml`, and starts the
+user-scoped gateway. The `local` profile needs nothing installed: agcode
+ships inside `pyagag` and runs as `python -m agag.agcode` from the same
+interpreter the checkout already uses. Run it from the production inventory
+after rendering current Nautobot placement intent:
 
 ```bash
 uv run --project ../nctl nctl render production --out inventories/generated
@@ -26,10 +26,12 @@ ansible-playbook -i inventories/generated/production.yml \
 ```
 
 The `autolab_node` deployment profile in `vars/deployment_profiles.yml` maps
-placement config to the provider `/v1` endpoint and optional role/profile
-overrides. Do not hand-edit the generated node overlay. OpenCode 1.18.10 and
-Claude Code 2.1.226 are pinned by their roles; selecting an unavailable or
-unauthenticated harness fails rather than falling back.
+placement config to the provider endpoint and optional role/profile
+overrides. Do not hand-edit the generated node overlay. The endpoint is the
+bare Ollama base URL with **no `/v1` suffix** — agcode posts to
+`{base_url}/v1/messages` and would double it. Claude Code 2.1.226 is pinned
+by its role; selecting an unavailable or unauthenticated harness fails rather
+than falling back.
 
 Anthropic authentication is optional and deployment-local. Set
 `autolab_node_anthropic_api_key_source` to a controller-local secret file via

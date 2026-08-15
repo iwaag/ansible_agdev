@@ -35,15 +35,17 @@
     'Removed ' in autolab_node_uv_sync.stderr
   notify: Restart autolab-gateway
 
-- name: Require the intent-supplied OpenAI-compatible Ollama endpoint
+# agcode posts to {base_url}/v1/messages, so the endpoint is the bare Ollama
+# base URL. A trailing /v1 — what the retired harness wanted — would double it.
+- name: Require the intent-supplied Ollama endpoint without a /v1 suffix
   ansible.builtin.assert:
     that:
       - autolab_node_provider_ollama_base_url is string
       - autolab_node_provider_ollama_base_url | length > 0
-      - autolab_node_provider_ollama_base_url is regex('/v1/?$')
+      - not (autolab_node_provider_ollama_base_url is regex('/v1/?$'))
     fail_msg: >-
       autolab_node_provider_ollama_base_url must come from placement intent
-      and end in /v1.
+      and must not end in /v1: agcode appends /v1/messages itself.
 
 - name: Generate the deployment-local agent overlay
   ansible.builtin.template:

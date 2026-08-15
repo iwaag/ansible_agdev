@@ -1,8 +1,7 @@
 schema = "ag.agent-config.v1"
 
-[local.harness.opencode]
-command = {{ autolab_node_opencode_command | to_json }}
-
+{# agcode needs no [local.harness.agcode] block: its default command is
+   sys.executable, already the interpreter that imports agag. #}
 [local.harness.claude_code]
 command = {{ autolab_node_claude_code_command | to_json }}
 

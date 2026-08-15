@@ -1,4 +1,0 @@
----
-# Optional developer-only override file. It is not loaded by the normal
-# node-agent playbook: declare providers in Nautobot and render inventory.
-opencode_agent_ollama_url: http://127.0.0.1:11434/v1
