@@ -29,6 +29,10 @@ autolab_node_plane_config_file: "{{ autolab_node_repo_dest }}/.local/plane.env"
 # node's URL, API email, and API key and remains in ignored local state.
 autolab_node_zulip_credentials_source: "{{ lookup('ansible.builtin.env', 'AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE') }}"
 autolab_node_zulip_config_file: "{{ autolab_node_repo_dest }}/.local/zulip.env"
+# Run the node's own Zulip listener. Off where the placement is the developer's
+# own checkout (agstudio runs its listener under launchd instead); on where the
+# node is meant to be an agag participant with its own bot identity.
+autolab_node_zulip_listener: false
 # PATH for the gateway and everything drive.sh/session.sh spawn under it
 # (claude, uv, node live in user space on the job-runner VM).
 autolab_node_service_path: >-

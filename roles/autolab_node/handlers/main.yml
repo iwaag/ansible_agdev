@@ -5,3 +5,10 @@
     scope: user
     daemon_reload: true
     state: restarted
+
+- name: Restart autolab-zulip
+  ansible.builtin.systemd_service:
+    name: autolab-zulip.service
+    scope: user
+    daemon_reload: true
+    state: restarted

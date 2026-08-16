@@ -241,6 +241,10 @@ deployment_profiles:
         ansible_variable: autolab_node_summarizer_profile
         type: string
         required: false
+      zulip_listener:
+        ansible_variable: autolab_node_zulip_listener
+        type: boolean
+        required: false
 
 deployment_profile_reconciliation:
   dnsmasq:

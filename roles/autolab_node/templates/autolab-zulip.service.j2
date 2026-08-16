@@ -1,0 +1,15 @@
+[Unit]
+Description=autolab Zulip listener (chat entrance, agag liveness status file)
+After=network-online.target
+
+[Service]
+Environment=PATH={{ autolab_node_service_path }}
+# The status file lands at <WorkingDirectory>/.local/agag-status.json, which is
+# this placement's declared workspace path — that is how nodeutils observes it.
+WorkingDirectory={{ autolab_node_repo_dest }}
+ExecStart={{ autolab_node_repo_dest }}/.venv/bin/python -m agautolab.zulip_listener
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
