@@ -1,0 +1,9 @@
+---
+- name: Install and update desired agag agent placements
+  hosts: agag_agents
+  gather_facts: true
+  become: false
+
+  roles:
+    - role: claude_code_agent
+    - role: agag_agent

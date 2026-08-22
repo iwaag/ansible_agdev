@@ -1,162 +1,27 @@
 ---
-- name: Update the agautolab checkout from GitHub
-  ansible.builtin.git:
-    repo: "{{ autolab_node_repo_url }}"
-    dest: "{{ autolab_node_repo_dest }}"
-    version: "{{ autolab_node_repo_version }}"
-    update: true
-  register: autolab_node_git
-  notify: Restart autolab-gateway
+- name: Deploy the agautolab checkout and optional listener through agag_agent
+  ansible.builtin.include_role:
+    name: agag_agent
+  vars:
+    agag_agent_repo_url: "{{ autolab_node_repo_url }}"
+    agag_agent_repo_version: "{{ autolab_node_repo_version }}"
+    agag_agent_repo_dest: "{{ autolab_node_repo_dest }}"
+    agag_agent_agent: agautolab
+    agag_agent_instance_name: "{{ autolab_node_instance_name }}"
+    agag_agent_listener_enabled: "{{ autolab_node_zulip_listener }}"
+    agag_agent_zulip_credentials_source: "{{ autolab_node_zulip_credentials_source }}"
+    agag_agent_plane_credentials_source: "{{ autolab_node_plane_credentials_source }}"
+    agag_agent_anthropic_api_key_source: "{{ autolab_node_anthropic_api_key_source }}"
+    agag_agent_claude_code_command: "{{ autolab_node_claude_code_command }}"
+    agag_agent_uv_command: "{{ autolab_node_uv_command }}"
+    agag_agent_provider_ollama_base_url: "{{ autolab_node_provider_ollama_base_url }}"
+    agag_agent_role_profiles:
+      front: "{{ autolab_node_front_profile }}"
+      director: "{{ autolab_node_director_profile }}"
+      mediator: "{{ autolab_node_mediator_profile }}"
+      coding: "{{ autolab_node_coding_profile }}"
+      summarizer: "{{ autolab_node_summarizer_profile }}"
 
-- name: Ensure agent state directories exist
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: "0755"
-  loop:
-    - "{{ autolab_node_state_dir }}"
-    - "{{ autolab_node_state_dir }}/sessions"
-    - "{{ autolab_node_state_dir }}/serve"
-    - "{{ autolab_node_state_dir }}/gateway"
-    - "{{ autolab_node_repo_dest }}/.local"
-
-- name: Synchronize the locked agautolab runtime dependencies
-  ansible.builtin.command:
-    argv:
-      - "{{ autolab_node_uv_command }}"
-      - sync
-      - --frozen
-      - --no-dev
-    chdir: "{{ autolab_node_repo_dest }}"
-  register: autolab_node_uv_sync
-  changed_when: >-
-    'Installed ' in autolab_node_uv_sync.stderr or
-    'Updated ' in autolab_node_uv_sync.stderr or
-    'Removed ' in autolab_node_uv_sync.stderr
-  notify: Restart autolab-gateway
-
-# agcode posts to {base_url}/v1/messages, so the endpoint is the bare Ollama
-# base URL. A trailing /v1 — what the retired harness wanted — would double it.
-- name: Require the intent-supplied Ollama endpoint without a /v1 suffix
-  ansible.builtin.assert:
-    that:
-      - autolab_node_provider_ollama_base_url is string
-      - autolab_node_provider_ollama_base_url | length > 0
-      - not (autolab_node_provider_ollama_base_url is regex('/v1/?$'))
-    fail_msg: >-
-      autolab_node_provider_ollama_base_url must come from placement intent
-      and must not end in /v1: agcode appends /v1/messages itself.
-
-- name: Generate the deployment-local agent overlay
-  ansible.builtin.template:
-    src: agents.local.toml.j2
-    dest: "{{ autolab_node_repo_dest }}/.local/agents.local.toml"
-    mode: "0600"
-  notify: Restart autolab-gateway
-
-- name: Ensure the optional local secret directory exists
-  ansible.builtin.file:
-    path: "{{ autolab_node_anthropic_api_key_file | dirname }}"
-    state: directory
-    mode: "0700"
-  when: autolab_node_anthropic_api_key_source | length > 0
-
-- name: Provision the optional Anthropic API key file
-  ansible.builtin.copy:
-    src: "{{ autolab_node_anthropic_api_key_source }}"
-    dest: "{{ autolab_node_anthropic_api_key_file }}"
-    mode: "0600"
-  no_log: true
-  when: autolab_node_anthropic_api_key_source | length > 0
-
-- name: Provision the Plane agent project configuration
-  ansible.builtin.template:
-    src: plane.env.j2
-    dest: "{{ autolab_node_plane_config_file }}"
-    mode: "0600"
-  no_log: true
-  when: autolab_node_plane_credentials_source | length > 0
-
-- name: Provision the Zulip bot configuration
-  ansible.builtin.copy:
-    src: "{{ autolab_node_zulip_credentials_source }}"
-    dest: "{{ autolab_node_zulip_config_file }}"
-    mode: "0600"
-  no_log: true
-  when: autolab_node_zulip_credentials_source | length > 0
-
-- name: Ensure the cagent client directories exist
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: "0700"
-  loop:
-    - "{{ autolab_cagent_state_dir }}"
-    - "{{ ansible_facts['env']['HOME'] }}/.local/bin"
-
-- name: Install the cagent human-entrance bearer token
-  ansible.builtin.copy:
-    content: "{{ lookup('file', autolab_cagent_token_source) | trim }}\n"
-    dest: "{{ autolab_cagent_state_dir }}/human_token"
-    mode: "0600"
-  no_log: true
-
-- name: Install the autolab cagent client
-  ansible.builtin.template:
-    src: autolab-cagent.py.j2
-    dest: "{{ autolab_cagent_client_path }}"
-    mode: "0755"
-
-- name: Retire the gateway bearer token (zero_auth episode)
-  ansible.builtin.file:
-    path: "{{ autolab_node_state_dir }}/gateway_token"
-    state: absent
-
-- name: Ensure the systemd user unit directory exists
-  ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
-    state: directory
-    mode: "0755"
-
-- name: Install the autolab-gateway systemd user unit
-  ansible.builtin.template:
-    src: autolab-gateway.service.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/autolab-gateway.service"
-    mode: "0644"
-  notify: Restart autolab-gateway
-
-- name: Enable and start the gateway
-  ansible.builtin.systemd_service:
-    name: autolab-gateway.service
-    scope: user
-    daemon_reload: true
-    enabled: true
-    state: started
-
-- name: Install the autolab-zulip systemd user unit
-  ansible.builtin.template:
-    src: autolab-zulip.service.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/autolab-zulip.service"
-    mode: "0644"
-  when: autolab_node_zulip_listener | bool
-  notify: Restart autolab-zulip
-
-- name: Enable and start the Zulip listener
-  ansible.builtin.systemd_service:
-    name: autolab-zulip.service
-    scope: user
-    daemon_reload: true
-    enabled: true
-    state: started
-  when: autolab_node_zulip_listener | bool
-
-- name: Apply pending gateway changes before verification
-  ansible.builtin.meta: flush_handlers
-
-- name: Wait for the gateway health probe
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ autolab_node_gateway_port }}/healthz"
-  register: autolab_node_health
-  retries: 5
-  delay: 2
-  until: autolab_node_health.status == 200
+- name: Deploy the autolab-only gateway surface
+  ansible.builtin.include_role:
+    name: autolab_gateway

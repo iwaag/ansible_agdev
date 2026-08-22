@@ -1,0 +1,71 @@
+---
+- name: Ensure agent state directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ autolab_node_state_dir }}"
+    - "{{ autolab_node_state_dir }}/sessions"
+    - "{{ autolab_node_state_dir }}/serve"
+    - "{{ autolab_node_state_dir }}/gateway"
+    - "{{ autolab_node_repo_dest }}/.local"
+
+- name: Ensure the cagent client directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ autolab_cagent_state_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+
+- name: Install the cagent human-entrance bearer token
+  ansible.builtin.copy:
+    content: "{{ lookup('file', autolab_cagent_token_source) | trim }}\n"
+    dest: "{{ autolab_cagent_state_dir }}/human_token"
+    mode: "0600"
+  no_log: true
+
+- name: Install the autolab cagent client
+  ansible.builtin.template:
+    src: autolab-cagent.py.j2
+    dest: "{{ autolab_cagent_client_path }}"
+    mode: "0755"
+
+- name: Retire the gateway bearer token (zero_auth episode)
+  ansible.builtin.file:
+    path: "{{ autolab_node_state_dir }}/gateway_token"
+    state: absent
+
+- name: Ensure the systemd user unit directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+
+- name: Install the autolab-gateway systemd user unit
+  ansible.builtin.template:
+    src: autolab-gateway.service.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/autolab-gateway.service"
+    mode: "0644"
+  notify: Restart autolab-gateway
+
+- name: Enable and start the gateway
+  ansible.builtin.systemd_service:
+    name: autolab-gateway.service
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+
+- name: Apply pending gateway changes before verification
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the gateway health probe
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ autolab_node_gateway_port }}/healthz"
+  register: autolab_node_health
+  retries: 5
+  delay: 2
+  until: autolab_node_health.status == 200

@@ -1,0 +1,18 @@
+---
+# agag agents are always deployed from their public GitHub repositories.
+agag_agent_repo_url: ""
+agag_agent_repo_version: main
+agag_agent_repo_dest: "{{ ansible_facts['env']['HOME'] }}/{{ agag_agent_agent }}"
+agag_agent_agent: ""
+agag_agent_instance_name: ""
+agag_agent_listener_enabled: true
+agag_agent_zulip_credentials_source: "{{ lookup('ansible.builtin.env', 'AGAG_AGENT_ZULIP_CREDENTIALS_SOURCE') }}"
+agag_agent_plane_credentials_source: "{{ lookup('ansible.builtin.env', 'AGAG_AGENT_PLANE_CREDENTIALS_SOURCE') }}"
+agag_agent_anthropic_api_key_source: "{{ lookup('ansible.builtin.env', 'AGAG_AGENT_ANTHROPIC_API_KEY_SOURCE') }}"
+agag_agent_claude_code_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
+agag_agent_uv_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/uv"
+agag_agent_provider_ollama_base_url: ""
+agag_agent_role_profiles: {}
+agag_agent_role_profiles_toml: ""
+agag_agent_service_path: >-
+  {{ agag_agent_repo_dest }}/.venv/bin:{{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin

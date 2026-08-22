@@ -1,0 +1,13 @@
+[Unit]
+Description={{ agag_agent_instance_name }} agag listener
+After=network-online.target
+
+[Service]
+Environment=PATH={{ agag_agent_service_path }}
+WorkingDirectory={{ agag_agent_repo_dest }}
+ExecStart={{ agag_agent_repo_dest }}/.venv/bin/python -m {{ agag_agent_agent }}.listener
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -7,6 +7,7 @@
 autolab_node_repo_url: https://github.com/iwaag/agautolab.git
 autolab_node_repo_version: main
 autolab_node_repo_dest: "{{ ansible_facts['env']['HOME'] }}/agautolab"
+autolab_node_instance_name: ""
 autolab_node_state_dir: "{{ autolab_node_repo_dest }}/.local/agent"
 autolab_node_gateway_port: 8791
 autolab_node_provider_ollama_base_url: ""

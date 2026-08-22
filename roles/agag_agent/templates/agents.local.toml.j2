@@ -1,0 +1,25 @@
+schema = "ag.agent-config.v1"
+
+[local.harness.claude_code]
+command = {{ agag_agent_claude_code_command | to_json }}
+{% if agag_agent_provider_ollama_base_url | length > 0 %}
+
+[local.provider.ollama]
+base_url = {{ agag_agent_provider_ollama_base_url | to_json }}
+{% endif %}
+{% if agag_agent_anthropic_api_key_source | length > 0 %}
+
+[local.secrets]
+anthropic_api_key_file = {{ (agag_agent_repo_dest ~ '/.local/secrets/anthropic_api_key') | to_json }}
+{% endif %}
+{% for role, profile in agag_agent_role_profiles | dictsort %}
+{% if profile | length > 0 %}
+
+[roles.{{ role }}]
+profile = {{ profile | to_json }}
+{% endif %}
+{% endfor %}
+{% if agag_agent_role_profiles_toml | trim | length > 0 %}
+
+{{ agag_agent_role_profiles_toml | trim }}
+{% endif %}

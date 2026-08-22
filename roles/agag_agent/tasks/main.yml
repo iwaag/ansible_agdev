@@ -1,0 +1,126 @@
+---
+- name: Validate the agag agent deployment inputs
+  ansible.builtin.assert:
+    that:
+      - agag_agent_repo_url is match('^https://github\\.com/')
+      - agag_agent_agent is match('^[a-z][a-z0-9_]*$')
+      - not agag_agent_listener_enabled or agag_agent_instance_name | length > 0
+      - not agag_agent_listener_enabled or agag_agent_zulip_credentials_source | length > 0
+    fail_msg: >-
+      agag_agent requires a GitHub repo, a Python package name, and (when the
+      listener is enabled) an instance name plus controller-local Zulip source.
+
+- name: Update the agag agent checkout from GitHub
+  ansible.builtin.git:
+    repo: "{{ agag_agent_repo_url }}"
+    dest: "{{ agag_agent_repo_dest }}"
+    version: "{{ agag_agent_repo_version }}"
+    update: true
+  register: agag_agent_git
+  notify: Restart agag agent
+
+- name: Synchronize the locked agag agent runtime dependencies
+  ansible.builtin.command:
+    argv:
+      - "{{ agag_agent_uv_command }}"
+      - sync
+      - --frozen
+    chdir: "{{ agag_agent_repo_dest }}"
+  register: agag_agent_uv_sync
+  changed_when: >-
+    'Installed ' in agag_agent_uv_sync.stderr or
+    'Updated ' in agag_agent_uv_sync.stderr or
+    'Removed ' in agag_agent_uv_sync.stderr
+  notify: Restart agag agent
+
+- name: Ensure agag agent local directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ agag_agent_repo_dest }}/.local", mode: "0755"}
+    - {path: "{{ agag_agent_repo_dest }}/.local/secrets", mode: "0700"}
+
+- name: Write the deployment instance identity
+  ansible.builtin.template:
+    src: instance.toml.j2
+    dest: "{{ agag_agent_repo_dest }}/.local/instance.toml"
+    mode: "0600"
+  when: agag_agent_listener_enabled | bool
+  notify: Restart agag agent
+
+- name: Generate the deployment-local agent overlay
+  ansible.builtin.template:
+    src: agents.local.toml.j2
+    dest: "{{ agag_agent_repo_dest }}/.local/agents.local.toml"
+    mode: "0600"
+  notify: Restart agag agent
+
+- name: Provision the Zulip bot configuration
+  ansible.builtin.copy:
+    src: "{{ agag_agent_zulip_credentials_source }}"
+    dest: "{{ agag_agent_repo_dest }}/.local/zulip.env"
+    mode: "0600"
+  no_log: true
+  when: agag_agent_listener_enabled | bool
+  notify: Restart agag agent
+
+- name: Provision the optional Plane configuration
+  ansible.builtin.template:
+    src: plane.env.j2
+    dest: "{{ agag_agent_repo_dest }}/.local/plane.env"
+    mode: "0600"
+  no_log: true
+  when: agag_agent_plane_credentials_source | length > 0
+  notify: Restart agag agent
+
+- name: Provision the optional Anthropic API key
+  ansible.builtin.copy:
+    src: "{{ agag_agent_anthropic_api_key_source }}"
+    dest: "{{ agag_agent_repo_dest }}/.local/secrets/anthropic_api_key"
+    mode: "0600"
+  no_log: true
+  when: agag_agent_anthropic_api_key_source | length > 0
+  notify: Restart agag agent
+
+- name: Ensure the systemd user unit directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+  when: agag_agent_listener_enabled | bool
+
+- name: Install the agag agent systemd user unit
+  ansible.builtin.template:
+    src: agag-agent.service.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/agag-{{ agag_agent_agent }}.service"
+    mode: "0644"
+  when: agag_agent_listener_enabled | bool
+  notify: Restart agag agent
+
+- name: Enable and start the agag agent listener
+  ansible.builtin.systemd_service:
+    name: "agag-{{ agag_agent_agent }}.service"
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+  when:
+    - agag_agent_listener_enabled | bool
+    - not ansible_check_mode
+
+- name: Apply pending listener changes before posting the introduction
+  ansible.builtin.meta: flush_handlers
+
+- name: Post the instance introduction after a checkout change
+  ansible.builtin.command:
+    argv:
+      - "{{ agag_agent_repo_dest }}/.venv/bin/python"
+      - -m
+      - "{{ agag_agent_agent }}.intro"
+    chdir: "{{ agag_agent_repo_dest }}"
+  when:
+    - agag_agent_listener_enabled | bool
+    - agag_agent_git.changed
+  changed_when: true

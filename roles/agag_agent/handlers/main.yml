@@ -1,0 +1,10 @@
+---
+- name: Restart agag agent
+  ansible.builtin.systemd_service:
+    name: "agag-{{ agag_agent_agent }}.service"
+    scope: user
+    daemon_reload: true
+    state: restarted
+  when:
+    - agag_agent_listener_enabled | bool
+    - not ansible_check_mode
