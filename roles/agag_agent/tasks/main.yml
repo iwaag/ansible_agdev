@@ -113,7 +113,31 @@
 - name: Apply pending listener changes before posting the introduction
   ansible.builtin.meta: flush_handlers
 
-- name: Post the instance introduction after a checkout change
+- name: Check the last revision introduced by this deployment
+  ansible.builtin.stat:
+    path: "{{ agag_agent_repo_dest }}/.local/intro-posted-revision"
+  register: agag_agent_intro_marker
+  when: agag_agent_listener_enabled | bool
+
+- name: Read the last introduced revision
+  ansible.builtin.slurp:
+    src: "{{ agag_agent_repo_dest }}/.local/intro-posted-revision"
+  register: agag_agent_intro_marker_content
+  when:
+    - agag_agent_listener_enabled | bool
+    - agag_agent_intro_marker.stat.exists
+
+- name: Decide whether this checkout revision needs an introduction
+  ansible.builtin.set_fact:
+    agag_agent_intro_required: >-
+      {{
+        not agag_agent_intro_marker.stat.exists or
+        (agag_agent_intro_marker_content.content | default('') | b64decode | trim)
+        != agag_agent_git.after
+      }}
+  when: agag_agent_listener_enabled | bool
+
+- name: Post the instance introduction for this checkout revision
   ansible.builtin.command:
     argv:
       - "{{ agag_agent_repo_dest }}/.venv/bin/python"
@@ -122,5 +146,16 @@
     chdir: "{{ agag_agent_repo_dest }}"
   when:
     - agag_agent_listener_enabled | bool
-    - agag_agent_git.changed
+    - agag_agent_intro_required
+    - not ansible_check_mode
   changed_when: true
+
+- name: Record the introduced checkout revision
+  ansible.builtin.copy:
+    content: "{{ agag_agent_git.after }}\n"
+    dest: "{{ agag_agent_repo_dest }}/.local/intro-posted-revision"
+    mode: "0600"
+  when:
+    - agag_agent_listener_enabled | bool
+    - agag_agent_intro_required
+    - not ansible_check_mode
