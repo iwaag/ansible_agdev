@@ -1,0 +1,70 @@
+---
+# Retire one agag agent instance from a node.
+#
+# The inverse of `setup_agag_agent.yml`, and the missing half of a retirement:
+# removing a placement from desired state stops the *inventory* carrying the
+# agent, so nothing redeploys it — but the systemd user unit it already
+# installed stays enabled, and the next boot starts the listener again, which
+# re-posts the introduction and puts a retired instance back on the board.
+# `refactor` p3 ex1 met exactly that with the `agecho` fixture.
+#
+# What it does not do: delete the bot account, the Zulip channel, or the
+# `intro-` topic's ✔. Retirement in this realm is a flag on the introduction
+# plus the absence of a declaration; this playbook only makes the node agree.
+#
+#   ansible-playbook -i inventories/generated/production.yml \
+#     playbooks/agent/retire_agag_agent.yml \
+#     -e agag_agent_agent=agecho -e target=agautolab1
+#
+# `remove_checkout=true` also deletes the repository checkout. Off by default:
+# the checkout holds the instance's ignored credentials and run records, and
+# a stopped unit is reversible while a deleted directory is not.
+- name: Retire an agag agent instance
+  hosts: "{{ target }}"
+  gather_facts: true
+  vars:
+    remove_checkout: false
+    agag_agent_repo_dest: "{{ ansible_facts['env']['HOME'] }}/{{ agag_agent_agent }}"
+  tasks:
+    - name: Require the agent name
+      ansible.builtin.assert:
+        that:
+          - agag_agent_agent is defined
+          - agag_agent_agent | length > 0
+        fail_msg: set -e agag_agent_agent=<name>
+
+    - name: Stop and disable the agag agent listener
+      ansible.builtin.systemd_service:
+        name: "agag-{{ agag_agent_agent }}.service"
+        state: stopped
+        enabled: false
+        scope: user
+      failed_when: false
+
+    - name: Remove the systemd user unit
+      ansible.builtin.file:
+        path: >-
+          {{ ansible_facts['env']['HOME'] }}/.config/systemd/user/agag-{{ agag_agent_agent }}.service
+        state: absent
+
+    - name: Reload the user manager so the removed unit is forgotten
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        scope: user
+
+    - name: Remove the agent checkout
+      ansible.builtin.file:
+        path: "{{ agag_agent_repo_dest }}"
+        state: absent
+      when: remove_checkout | bool
+
+    - name: Report what is left
+      ansible.builtin.command:
+        cmd: "systemctl --user list-unit-files agag-{{ agag_agent_agent }}.service"
+      register: remaining
+      changed_when: false
+      failed_when: false
+
+    - name: Show it
+      ansible.builtin.debug:
+        var: remaining.stdout_lines
