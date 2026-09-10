@@ -7,7 +7,6 @@ agag_agent_agent: ""
 agag_agent_instance_name: ""
 agag_agent_listener_enabled: true
 agag_agent_zulip_credentials_source: "{{ lookup('ansible.builtin.env', 'AGAG_AGENT_ZULIP_CREDENTIALS_SOURCE') }}"
-agag_agent_plane_credentials_source: "{{ lookup('ansible.builtin.env', 'AGAG_AGENT_PLANE_CREDENTIALS_SOURCE') }}"
 agag_agent_anthropic_api_key_source: "{{ lookup('ansible.builtin.env', 'AGAG_AGENT_ANTHROPIC_API_KEY_SOURCE') }}"
 agag_agent_claude_code_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
 agag_agent_uv_command: "{{ ansible_facts['env']['HOME'] }}/.local/bin/uv"

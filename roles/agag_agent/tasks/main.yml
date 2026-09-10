@@ -66,13 +66,15 @@
   when: agag_agent_listener_enabled | bool
   notify: Restart agag agent
 
-- name: Provision the optional Plane configuration
-  ansible.builtin.template:
-    src: plane.env.j2
-    dest: "{{ agag_agent_repo_dest }}/.local/plane.env"
-    mode: "0600"
-  no_log: true
-  when: agag_agent_plane_credentials_source | length > 0
+# `refactor` p3 removed Plane. A node deployed before that still holds the
+# credential this role used to write, and a role that merely stops writing a
+# file leaves it there — so the removal is a task of its own. It is what makes
+# "reinstalling an agent cannot restore Plane credentials" true of the nodes
+# that already have them, not only of the next install.
+- name: Remove the retired Plane configuration
+  ansible.builtin.file:
+    path: "{{ agag_agent_repo_dest }}/.local/plane.env"
+    state: absent
   notify: Restart agag agent
 
 - name: Provision the optional Anthropic API key

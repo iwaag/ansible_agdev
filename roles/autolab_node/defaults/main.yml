@@ -22,10 +22,6 @@ autolab_node_summarizer_profile: ""
 # mode-0600 node file; the generated agent overlay contains the path reference.
 autolab_node_anthropic_api_key_source: ""
 autolab_node_anthropic_api_key_file: "{{ autolab_node_repo_dest }}/.local/secrets/anthropic_api_key"
-# Optional controller-local Plane credential bundle. The node receives only
-# the agent API and project/state values selected by plane.env.j2.
-autolab_node_plane_credentials_source: "{{ lookup('ansible.builtin.env', 'AUTOLAB_NODE_PLANE_CREDENTIALS_SOURCE') }}"
-autolab_node_plane_config_file: "{{ autolab_node_repo_dest }}/.local/plane.env"
 # Optional controller-local Zulip bot credential bundle. It contains only the
 # node's URL, API email, and API key and remains in ignored local state.
 autolab_node_zulip_credentials_source: "{{ lookup('ansible.builtin.env', 'AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE') }}"
