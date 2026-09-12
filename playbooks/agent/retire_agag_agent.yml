@@ -33,13 +33,26 @@
           - agag_agent_agent | length > 0
         fail_msg: set -e agag_agent_agent=<name>
 
+    - name: Read whether the unit exists
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - --user
+          - show
+          - "agag-{{ agag_agent_agent }}.service"
+          - --property=LoadState
+          - --value
+      register: unit_load
+      changed_when: false
+      failed_when: unit_load.rc != 0 and unit_load.stdout | trim != 'not-found'
+
     - name: Stop and disable the agag agent listener
       ansible.builtin.systemd_service:
         name: "agag-{{ agag_agent_agent }}.service"
         state: stopped
         enabled: false
         scope: user
-      failed_when: false
+      when: unit_load.stdout | trim != 'not-found'
 
     - name: Remove the systemd user unit
       ansible.builtin.file:
@@ -52,19 +65,31 @@
         daemon_reload: true
         scope: user
 
+    - name: Read the remaining process state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - --user
+          - show
+          - "agag-{{ agag_agent_agent }}.service"
+          - --property=LoadState,ActiveState,MainPID
+      register: unit_state
+      changed_when: false
+      failed_when: unit_state.rc != 0 and 'LoadState=not-found' not in unit_state.stdout_lines
+
+    - name: Confirm that the listener is no longer running
+      ansible.builtin.assert:
+        that:
+          - "'MainPID=0' in unit_state.stdout_lines"
+          - "'ActiveState=inactive' in unit_state.stdout_lines or 'ActiveState=failed' in unit_state.stdout_lines"
+        fail_msg: "Listener retirement did not stop the unit: {{ unit_state.stdout }}"
+
     - name: Remove the agent checkout
       ansible.builtin.file:
         path: "{{ agag_agent_repo_dest }}"
         state: absent
       when: remove_checkout | bool
 
-    - name: Report what is left
-      ansible.builtin.command:
-        cmd: "systemctl --user list-unit-files agag-{{ agag_agent_agent }}.service"
-      register: remaining
-      changed_when: false
-      failed_when: false
-
-    - name: Show it
+    - name: Report the stopped unit state
       ansible.builtin.debug:
-        var: remaining.stdout_lines
+        var: unit_state.stdout_lines
