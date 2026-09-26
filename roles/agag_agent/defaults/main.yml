@@ -15,3 +15,9 @@ agag_agent_role_profiles: {}
 agag_agent_role_profiles_toml: ""
 agag_agent_service_path: >-
   {{ agag_agent_repo_dest }}/.venv/bin:{{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
+# The shared context catalog every agent on this host reads (pyagag agrefs;
+# give_context_easier p1). Written once per host to ~/.config/agag/refs.toml,
+# so every agag instance there discovers the same sources with no per-agent
+# file. Empty leaves the host file alone. The URL must be reachable from the
+# node, which is why it is an input rather than the command node's own name.
+agag_agent_refs_catalog_url: "{{ agrefs_catalog_url | default('', true) }}"

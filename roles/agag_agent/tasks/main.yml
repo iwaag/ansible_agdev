@@ -42,6 +42,20 @@
     - {path: "{{ agag_agent_repo_dest }}/.local", mode: "0755"}
     - {path: "{{ agag_agent_repo_dest }}/.local/secrets", mode: "0700"}
 
+- name: Ensure the host agag configuration directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/agag"
+    state: directory
+    mode: "0755"
+  when: agag_agent_refs_catalog_url | length > 0
+
+- name: Name the shared context catalog for every agent on this host
+  ansible.builtin.template:
+    src: refs.toml.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/agag/refs.toml"
+    mode: "0644"
+  when: agag_agent_refs_catalog_url | length > 0
+
 - name: Write the deployment instance identity
   ansible.builtin.template:
     src: instance.toml.j2

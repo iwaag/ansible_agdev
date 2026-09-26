@@ -24,3 +24,7 @@ nautobot_token: >-
     | default(vault_nautobot_token | default(''), true)
   }}
 nautobot_validate_certs: true
+# The shared context catalog URL as the nodes reach it (agag_agent writes it
+# to ~/.config/agag/refs.toml). A host fact, so it comes from the controller's
+# environment, never from this file.
+agrefs_catalog_url: "{{ lookup('ansible.builtin.env', 'AGREFS_CATALOG_URL') }}"
