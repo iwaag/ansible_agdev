@@ -23,14 +23,39 @@
   ansible.builtin.include_tasks: macos.yml
   when: ansible_facts['system'] == 'Darwin'
 
-- name: Verify each mount is usable by the login user (triggers the automount)
-  ansible.builtin.command:
-    argv: [ls, -1A, "{{ item.nfs_client_path }}"]
-  become: true
-  become_user: "{{ nfs_client_verify_user }}"
-  async: 60
-  poll: 2
-  changed_when: false
-  loop: "{{ nfs_client_mounts }}"
-  loop_control:
-    label: "{{ item.instance_name }}"
+- block:
+    - name: Verify each mount is usable by the login user (triggers the automount)
+      ansible.builtin.command:
+        argv: [ls, -1A, "{{ item.nfs_client_path }}"]
+      become: true
+      become_user: "{{ nfs_client_verify_user }}"
+      async: 60
+      poll: 2
+      changed_when: false
+      loop: "{{ nfs_client_mounts }}"
+      loop_control:
+        label: "{{ item.instance_name }}"
+  rescue:
+    # Darwin only: no autofs trigger means the automounter's own state is
+    # the evidence that matters (e.g. the master map has more than one
+    # entry for the same mountpoint, and only the first is honoured); show
+    # it instead of just the bare "No such file or directory".
+    - name: Read the master map for diagnosis
+      ansible.builtin.slurp:
+        src: "{{ nfs_client_macos_master }}"
+      register: nfs_client_master_now
+      when: ansible_facts['system'] == 'Darwin'
+
+    - name: Fail with the actual automounter state
+      ansible.builtin.fail:
+        msg: >-
+          No autofs trigger exists for one or more of
+          {{ nfs_client_mounts | map(attribute='nfs_client_path') | list }}.
+          Current {{ nfs_client_macos_master }}:
+          {{ (nfs_client_master_now.content | b64decode).splitlines() }}
+      when: ansible_facts['system'] == 'Darwin'
+
+    - name: Re-raise the original failure
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('mount verification failed') }}"
+      when: ansible_facts['system'] != 'Darwin'

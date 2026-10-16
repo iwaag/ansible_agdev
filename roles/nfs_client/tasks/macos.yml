@@ -18,9 +18,17 @@
   register: nfs_client_map
   notify: Reload the macOS automounter
 
-- name: Reference the map from auto_master (other entries are left alone)
+- name: Take over the direct-map mountpoint (macOS allows only one "/-" entry)
   ansible.builtin.lineinfile:
-    path: /etc/auto_master
+    path: "{{ nfs_client_macos_master }}"
+    regexp: '^/-\s+(?!{{ nfs_client_macos_map | basename }}\b)\S+'
+    state: absent
+    backup: true
+  notify: Reload the macOS automounter
+
+- name: Reference the map from auto_master (this role's own line only)
+  ansible.builtin.lineinfile:
+    path: "{{ nfs_client_macos_master }}"
     regexp: '^/-\s+{{ nfs_client_macos_map | basename }}(\s|$)'
     line: "/-\t\t\t{{ nfs_client_macos_map | basename }}\t-nosuid"
     backup: true

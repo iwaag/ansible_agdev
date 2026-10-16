@@ -20,6 +20,12 @@ nfs_client_macos_base_options:
   - hard
   - vers=3
 nfs_client_macos_map: /etc/auto_nintent
+# The master map this role's direct-map entry is referenced from. macOS
+# allows only one master-map entry per mountpoint (auto_master(5)); since
+# this is a direct map, that mountpoint is the literal "/-", so this role
+# must be the sole "/-" entry, not merely add its own alongside any other.
+# Overridable so the takeover logic can be exercised against a scratch file.
+nfs_client_macos_master: /etc/auto_master
 # The user whose access is verified after mounting (the login user that
 # agents and services run as).
 nfs_client_verify_user: "{{ ansible_user | default(default_user) }}"
