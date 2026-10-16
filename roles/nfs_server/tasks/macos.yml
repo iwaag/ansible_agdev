@@ -1,0 +1,105 @@
+---
+- name: Confirm privilege escalation reached root (read-only)
+  ansible.builtin.command: id -u
+  changed_when: false
+  register: nfs_server_macos_whoami
+
+- name: Refuse to continue without root
+  ansible.builtin.assert:
+    that:
+      - nfs_server_macos_whoami.stdout | trim == '0'
+    fail_msg: "This host did not escalate to root: the macOS NFS server cannot be configured without privilege (check Ansible become / sudoers)"
+
+- name: Reject a client entry this macOS export cannot express
+  ansible.builtin.assert:
+    that:
+      - (item.1 is not match('.*/.*')) or (item.1 is match('.*/32$'))
+    fail_msg: >-
+      {{ item.0.instance_name }}: macOS exports(5) has no per-host CIDR mask syntax; "{{ item.1 }}" must be a
+      bare host/IP or a /32 (a single host), not a wider subnet. Use -network=/-mask= some other way if a
+      subnet export is ever needed (not supported by this role yet).
+  loop: "{{ nfs_server_exports | subelements('nfs_server_clients') }}"
+  loop_control:
+    label: "{{ item.0.instance_name }}: {{ item.1 }}"
+
+- name: Write a managed export block for each placement in /etc/exports (other lines are left alone)
+  ansible.builtin.blockinfile:
+    path: /etc/exports
+    create: true
+    owner: root
+    group: wheel
+    mode: "0644"
+    marker: "# {mark} nintent-{{ item.instance_name }} (nfs_server)"
+    block: >-
+      {{ item.nfs_server_path }}
+      -mapall={{ item.nfs_server_anon_uid | int }}:{{ item.nfs_server_anon_gid | int }}
+      {{ (item.nfs_server_options | default([])) | join(' ') }}
+      {{ item.nfs_server_clients | map('regex_replace', '/32$', '') | join(' ') }}
+  loop: "{{ nfs_server_exports }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+  register: nfs_server_macos_blocks
+
+- name: Read /etc/exports for blocks of placements no longer active
+  ansible.builtin.slurp:
+    src: /etc/exports
+  register: nfs_server_macos_exports_now
+
+- name: Remove export blocks of placements that are no longer active (other blocks are left alone)
+  ansible.builtin.blockinfile:
+    path: /etc/exports
+    marker: "# {mark} nintent-{{ item }} (nfs_server)"
+    state: absent
+  loop: >-
+    {{ (nfs_server_macos_exports_now.content | b64decode).splitlines()
+       | select('search', '^# BEGIN nintent-.+ \(nfs_server\)$')
+       | map('regex_replace', '^# BEGIN nintent-(.+) \(nfs_server\)$', '\1') | list
+       | difference(nfs_server_exports | map(attribute='instance_name') | list) }}
+  register: nfs_server_macos_blocks_removed
+
+- name: Validate /etc/exports before activating it
+  ansible.builtin.command: nfsd checkexports
+  changed_when: false
+
+- name: Read nfsd's enabled/running state
+  ansible.builtin.command: nfsd status
+  changed_when: false
+  failed_when: false
+  register: nfs_server_macos_status
+
+- name: Enable nfsd so exports activate automatically going forward
+  ansible.builtin.command: nfsd enable
+  changed_when: false
+  when: "'service is enabled' not in nfs_server_macos_status.stdout"
+
+- name: Start nfsd if it is not already running
+  ansible.builtin.command: nfsd start
+  changed_when: true
+  when: "'is running' not in nfs_server_macos_status.stdout"
+
+- name: Reload the export table (every run, so an earlier failed export is retried)
+  ansible.builtin.command: nfsd update
+  changed_when: false
+
+- name: Read the nfsd process (a bounded, non-hanging proof the daemon is up)
+  ansible.builtin.command: pgrep -x nfsd
+  changed_when: false
+  failed_when: false
+  register: nfs_server_macos_pgrep
+
+- name: Read the exports the mount daemon currently answers for
+  ansible.builtin.command: showmount -e localhost
+  changed_when: false
+  register: nfs_server_macos_showmount
+
+- name: Verify the server runs and exports every placement
+  ansible.builtin.assert:
+    that:
+      - nfs_server_macos_pgrep.rc == 0
+      - >-
+        item.nfs_server_path in (nfs_server_macos_showmount.stdout_lines[1:]
+        | map('trim') | map('regex_replace', '\s.*$', '') | list)
+    fail_msg: "{{ item.nfs_server_path }} is configured but not exported by a running server"
+  loop: "{{ nfs_server_exports }}"
+  loop_control:
+    label: "{{ item.instance_name }}"

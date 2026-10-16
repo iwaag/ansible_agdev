@@ -228,8 +228,8 @@ ansible-playbook playbooks/power/wake_linux_hosts.yml --limit <host_or_group>
 
 ### Shared NFS areas (`nfs_server`, `nfs_client`)
 
-project_migration p6. A shared area is one export on a Debian-family Linux
-host (`nfs_server`) and one mount per client (`nfs_client`, Linux or macOS).
+project_migration p6 / p6 ex1. A shared area is one export (`nfs_server`,
+Linux or macOS) and one mount per client (`nfs_client`, Linux or macOS).
 Install it like any service: declare the placements in Nautobot, then
 `nctl reconcile <host>` — the server's host first (a profile dependency only
 orders actions on the same host). Projects never see these paths: they name
@@ -237,17 +237,19 @@ a logical share that each host resolves in its own ignored configuration.
 
 | profile | placement config | what the playbook does |
 |---|---|---|
-| `nfs_server` | `share`, `path` (backing directory), `clients` (export client specs, e.g. a LAN CIDR), `anon_uid`/`anon_gid` (the share owner), optional `mode` (default `2775`), `options` (extra export options) | installs `nfs-kernel-server`; creates `path` owned by `anon_uid:anon_gid`; writes `/etc/exports.d/nintent-<instance>.exports` with `rw,sync,no_subtree_check,all_squash,anonuid,anongid` + `options`; removes only `nintent-*` files of inactive placements; re-exports and verifies the path is exported by a running server. Refuses an unprivileged container (the kernel server cannot run there) |
+| `nfs_server` | `share`, `path` (backing directory), `clients` (export client specs — a bare host/IP, or an `ip/32` for a single host; macOS has no wider CIDR mask syntax), `anon_uid`/`anon_gid` (the share owner), optional `mode` (default `2775`), `options` (extra export options, Linux `exportfs` or macOS `exports(5)` flags matching the placement's own host) | Linux: installs `nfs-kernel-server`; creates `path` owned by `anon_uid:anon_gid`; writes `/etc/exports.d/nintent-<instance>.exports` with `rw,sync,no_subtree_check,all_squash,anonuid,anongid` + `options`; removes only `nintent-*` files of inactive placements; re-exports (`exportfs -ra`) and verifies the path is exported by a running server (kernel thread count + `/var/lib/nfs/etab`). Refuses an unprivileged container (the kernel server cannot run there). macOS: creates `path` the same way; writes one marked block per placement into `/etc/exports` (`<path> -mapall=anon_uid:anon_gid` + `options` + clients) — `blockinfile`, so blocks and lines it did not write are left alone; validates with `nfsd checkexports` before activating; `nfsd enable`/`start`/`update`; verifies with `pgrep -x nfsd` and `showmount -e localhost`. Both: a read-only privilege preflight runs before any mutating step |
 | `nfs_client` | `share`, `server` (host name), `export` (the server's `path`), `path` (mount point), optional `options` | Linux: installs `nfs-common`, one fstab line marked `# nintent:<instance>` (`rw,hard,nofail,_netdev,x-systemd.automount,x-systemd.mount-timeout=30` + `options`), starts its automount unit. macOS: the direct map `/etc/auto_nintent` (`rw,resvport,hard,vers=3` + `options`) referenced from `/etc/auto_master`. Lines and maps it did not write are left alone. Both: verifies the login user can list the mount |
 
-`all_squash` makes every client user the share owner, so a macOS user
-(uid 501) and a Linux user (uid 1000) read and write the same files. Choose
-`clients` as narrowly as the hosts that mount it.
+`all_squash` (Linux) / `-mapall=` (macOS) makes every client user the share
+owner, so a macOS user (uid 501) and a Linux user (uid 1000) read and write
+the same files. Choose `clients` as narrowly as the hosts that mount it.
 
 Observation: the checks `nfs_export` and `nfs_mount` (nodeutils, as the
 login user) report configured / running / exported, and configured /
 mounted / listable; anything short of all of them is `service_missing` in
-drift. They do not prove writes, large-file integrity or that two hosts see
+drift. `nfs_export` reads Linux's kernel export table and nfsd thread count,
+or macOS's `pgrep nfsd` + `showmount -e localhost` — same four states either
+way. They do not prove writes, large-file integrity or that two hosts see
 the same files — verify those with the playbook below when installing.
 
 `playbooks/services/verify_nfs_mount.yml` checks a mount as the host's login

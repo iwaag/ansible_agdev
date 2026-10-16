@@ -1,0 +1,85 @@
+---
+- name: Read the user-namespace map (an unprivileged container cannot run the kernel NFS server)
+  ansible.builtin.slurp:
+    src: /proc/self/uid_map
+  register: nfs_server_uid_map
+
+- name: Refuse an unprivileged container
+  ansible.builtin.assert:
+    that:
+      - (nfs_server_uid_map.content | b64decode).split()[1] == '0'
+    fail_msg: "This host maps root to an unprivileged uid: the kernel NFS server cannot run here (use a VM or a privileged container)"
+
+- name: Install the kernel NFS server
+  ansible.builtin.apt:
+    name: nfs-kernel-server
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure the exports directory exists
+  ansible.builtin.file:
+    path: "{{ nfs_server_exports_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Write one exports file per placement
+  ansible.builtin.template:
+    src: export.j2
+    dest: "{{ nfs_server_exports_dir }}/{{ nfs_server_file_prefix }}{{ item.instance_name }}.exports"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ nfs_server_exports }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+
+- name: Find exports files this role wrote earlier
+  ansible.builtin.find:
+    paths: "{{ nfs_server_exports_dir }}"
+    patterns: "{{ nfs_server_file_prefix }}*.exports"
+  register: nfs_server_existing
+
+- name: Remove exports of placements that are no longer active (other exports are left alone)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ nfs_server_existing.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: >-
+    (item.path | basename) not in
+    (nfs_server_exports | map(attribute='instance_name') | map('regex_replace', '^', nfs_server_file_prefix)
+     | map('regex_replace', '$', '.exports') | list)
+
+- name: Run the NFS server
+  ansible.builtin.service:
+    name: nfs-server
+    enabled: true
+    state: started
+
+- name: Export the current configuration (every run, so an earlier failed export is retried)
+  ansible.builtin.command: exportfs -ra
+  changed_when: false
+
+- name: Read the export table rpc.mountd answers from
+  ansible.builtin.slurp:
+    src: /var/lib/nfs/etab
+  register: nfs_server_etab
+
+- name: Read the number of running nfsd threads
+  ansible.builtin.slurp:
+    src: /proc/fs/nfsd/threads
+  register: nfs_server_threads
+
+- name: Verify the server runs and exports every placement
+  ansible.builtin.assert:
+    that:
+      - (nfs_server_threads.content | b64decode | trim | int) > 0
+      - >-
+        item.nfs_server_path in ((nfs_server_etab.content | b64decode).splitlines()
+        | map('split') | select | map('first') | list)
+    fail_msg: "{{ item.nfs_server_path }} is configured but not exported by a running server"
+  loop: "{{ nfs_server_exports }}"
+  loop_control:
+    label: "{{ item.instance_name }}"

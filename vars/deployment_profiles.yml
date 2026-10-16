@@ -460,6 +460,7 @@ deployment_profile_reconciliation:
       kind: playbook
       playbook_by_os:
         linux: playbooks/services/setup_nfs_server.yml
+        macos: playbooks/services/setup_nfs_server_macos.yml
     checks:
       - kind: nfs_export
         path_from_config: path
