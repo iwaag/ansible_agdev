@@ -20,7 +20,3 @@
       mediator: "{{ autolab_node_mediator_profile }}"
       coding: "{{ autolab_node_coding_profile }}"
       summarizer: "{{ autolab_node_summarizer_profile }}"
-
-- name: Deploy the autolab-only gateway surface
-  ansible.builtin.include_role:
-    name: autolab_gateway

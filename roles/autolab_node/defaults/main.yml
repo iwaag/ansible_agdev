@@ -30,12 +30,3 @@ autolab_node_zulip_config_file: "{{ autolab_node_repo_dest }}/.local/zulip.env"
 # own checkout (agstudio runs its listener under launchd instead); on where the
 # node is meant to be an agag participant with its own bot identity.
 autolab_node_zulip_listener: false
-# PATH for the gateway and everything drive.sh/session.sh spawn under it
-# (claude, uv, node live in user space on the job-runner VM).
-autolab_node_service_path: >-
-  {{ autolab_node_repo_dest }}/.venv/bin:{{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['HOME'] }}/.local/node/bin:/usr/local/bin:/usr/bin:/bin
-# Human-entrance cagent credentials stay local on the controller and node.
-autolab_cagent_url: https://agstudio.local:8789
-autolab_cagent_token_source: "{{ lookup('env', 'HOME') }}/.local/state/cagent/human_token"
-autolab_cagent_state_dir: "{{ ansible_facts['env']['HOME'] }}/.local/state/cagent"
-autolab_cagent_client_path: "{{ ansible_facts['env']['HOME'] }}/.local/bin/autolab-cagent"
