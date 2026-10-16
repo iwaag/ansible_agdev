@@ -1,0 +1,4 @@
+---
+- name: Reload the macOS automounter
+  ansible.builtin.command: automount -cv
+  changed_when: true

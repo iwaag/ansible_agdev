@@ -1,0 +1,8 @@
+---
+- name: Mount nctl-managed NFS shares on Debian-family Linux hosts
+  hosts: "nfs_clients:&linux"
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: nfs_client

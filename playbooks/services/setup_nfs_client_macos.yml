@@ -1,0 +1,8 @@
+---
+- name: Mount nctl-managed NFS shares on macOS hosts
+  hosts: "nfs_clients:&macos"
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: nfs_client

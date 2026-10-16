@@ -1,0 +1,124 @@
+---
+# Verify an NFS mount from the client side, as the host's login user (the user
+# agents and services run as there). Changes nothing outside one probe folder
+# inside the mount. A change run calls it per client and compares the
+# results between hosts; it is not a reconciler.
+#
+#   -e nfs_verify_path=<mount point> -e nfs_verify_probe=probe-<name>
+#   -e nfs_verify_action=probe|write|hash|remount|cleanup [-e nfs_verify_size_mib=N]
+#
+# probe    list the mount, write probe/<host>.txt, rename it to <host>.done, read it back
+# write    write probe/<host>.bin of N MiB of random bytes and report its sha256
+# hash     report name, size and sha256 of every file in probe/ (compare between hosts)
+# remount  unmount (as root) and list again as the user: the automount must bring it back
+# cleanup  remove probe/
+#
+# Every run prints one `nfs_verify` result (host, user, action, files, mounted).
+- name: Verify an NFS mount as the login user
+  hosts: "{{ nfs_verify_hosts | default('nfs_clients') }}"
+  gather_facts: true
+  become: false
+
+  vars:
+    nfs_verify_size_mib: 512
+    nfs_verify_dir: "{{ nfs_verify_path }}/{{ nfs_verify_probe }}"
+
+  tasks:
+    - name: Validate the request
+      ansible.builtin.assert:
+        that:
+          - nfs_verify_path is defined and nfs_verify_path is match('^/[^\s]+$')
+          - nfs_verify_probe is defined and nfs_verify_probe is match('^probe-[a-z0-9-]+$')
+          - nfs_verify_action is defined and nfs_verify_action in ['probe', 'write', 'hash', 'remount', 'cleanup']
+          - nfs_verify_size_mib | int > 0 and nfs_verify_size_mib | int <= 16384
+
+    - name: Unmount (root) before listing again
+      ansible.builtin.command:
+        argv: [umount, "{{ nfs_verify_path }}"]
+      become: true
+      register: nfs_verify_umount
+      changed_when: nfs_verify_umount.rc == 0
+      failed_when: false
+      when: nfs_verify_action == 'remount'
+
+    - name: List the mount (triggers the automount)
+      ansible.builtin.command:
+        argv: [ls, -1A, "{{ nfs_verify_path }}"]
+      async: 60
+      poll: 2
+      changed_when: false
+
+    - name: Read the mount table
+      ansible.builtin.command: mount
+      register: nfs_verify_mounts
+      changed_when: false
+
+    - name: Ensure the probe folder exists
+      ansible.builtin.file:
+        path: "{{ nfs_verify_dir }}"
+        state: directory
+        mode: "0775"
+      when: nfs_verify_action in ['probe', 'write']
+
+    - name: Write, rename and read back a probe file
+      when: nfs_verify_action == 'probe'
+      block:
+        - name: Write the probe file
+          ansible.builtin.copy:
+            dest: "{{ nfs_verify_dir }}/{{ inventory_hostname }}.txt"
+            content: "{{ inventory_hostname }} {{ ansible_date_time.iso8601 }}\n"
+            mode: "0664"
+        - name: Rename it
+          ansible.builtin.command:
+            argv: [mv, -f, "{{ nfs_verify_dir }}/{{ inventory_hostname }}.txt", "{{ nfs_verify_dir }}/{{ inventory_hostname }}.done"]
+          changed_when: true
+        - name: Read it back
+          ansible.builtin.slurp:
+            src: "{{ nfs_verify_dir }}/{{ inventory_hostname }}.done"
+          register: nfs_verify_readback
+
+    - name: Write a large file of random bytes
+      ansible.builtin.command:
+        argv: [dd, if=/dev/urandom, "of={{ nfs_verify_dir }}/{{ inventory_hostname }}.bin", bs=1048576, "count={{ nfs_verify_size_mib | int }}"]
+      changed_when: true
+      when: nfs_verify_action == 'write'
+
+    - name: Find the probe files
+      ansible.builtin.find:
+        paths: "{{ nfs_verify_dir }}"
+        file_type: file
+      register: nfs_verify_found
+      when: nfs_verify_action in ['probe', 'write', 'hash']
+
+    - name: Hash the probe files
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+        checksum_algorithm: sha256
+        get_checksum: true
+      loop: "{{ nfs_verify_found.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      register: nfs_verify_hashes
+      when: nfs_verify_action in ['probe', 'write', 'hash']
+
+    - name: Remove the probe folder
+      ansible.builtin.file:
+        path: "{{ nfs_verify_dir }}"
+        state: absent
+      when: nfs_verify_action == 'cleanup'
+
+    - name: Report
+      ansible.builtin.debug:
+        msg:
+          nfs_verify:
+            host: "{{ inventory_hostname }}"
+            user: "{{ ansible_user_id }}"
+            action: "{{ nfs_verify_action }}"
+            path: "{{ nfs_verify_path }}"
+            mounted: "{{ (nfs_verify_mounts.stdout_lines | select('search', ' on ' ~ nfs_verify_path ~ ' ') | select('search', 'nfs') | list | length) > 0 }}"
+            unmounted_first: "{{ (nfs_verify_umount.rc | default(1)) == 0 }}"
+            readback: "{{ (nfs_verify_readback.content | default('') | b64decode | trim) if nfs_verify_readback is defined else '' }}"
+            files: >-
+              {{ (nfs_verify_hashes.results | default([])) | selectattr('stat', 'defined')
+                 | map(attribute='stat') | map('dict2items') | map('selectattr', 'key', 'in', ['path', 'size', 'checksum'])
+                 | map('items2dict') | list }}

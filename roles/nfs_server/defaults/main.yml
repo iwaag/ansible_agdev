@@ -1,0 +1,15 @@
+---
+# One row per active nfs_server placement on this host (nctl render
+# production). Keys are the profile's ansible variables.
+nfs_server_exports: []
+# Options every export gets before a placement's own `options`. all_squash
+# maps every client user to the share owner, so hosts whose users have
+# different uids (macOS 501, Linux 1000) read and write as one owner.
+nfs_server_base_options:
+  - rw
+  - sync
+  - no_subtree_check
+  - all_squash
+# Only files this role wrote are ever replaced or removed.
+nfs_server_exports_dir: /etc/exports.d
+nfs_server_file_prefix: nintent-

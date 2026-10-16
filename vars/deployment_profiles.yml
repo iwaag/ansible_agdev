@@ -283,6 +283,72 @@ deployment_profiles:
         type: string
         required: false
 
+  # project_migration p6: one shared area served by a Debian-family Linux
+  # host and mounted by Linux and macOS clients. Physical paths live in
+  # placement config, never in a project: projects name a logical share.
+  nfs_server:
+    group: nfs_servers
+    config_schema_version: "1"
+    placement_list_variable: nfs_server_exports
+    variables:
+      share:
+        ansible_variable: nfs_server_share
+        type: string
+        required: true
+      path:
+        ansible_variable: nfs_server_path
+        type: string
+        required: true
+      clients:
+        ansible_variable: nfs_server_clients
+        type: list
+        items: string
+        required: true
+      anon_uid:
+        ansible_variable: nfs_server_anon_uid
+        type: integer
+        required: true
+      anon_gid:
+        ansible_variable: nfs_server_anon_gid
+        type: integer
+        required: true
+      mode:
+        ansible_variable: nfs_server_mode
+        type: string
+        required: false
+      options:
+        ansible_variable: nfs_server_options
+        type: list
+        items: string
+        required: false
+
+  nfs_client:
+    group: nfs_clients
+    config_schema_version: "1"
+    placement_list_variable: nfs_client_mounts
+    variables:
+      share:
+        ansible_variable: nfs_client_share
+        type: string
+        required: true
+      server:
+        ansible_variable: nfs_client_server
+        type: string
+        required: true
+      export:
+        ansible_variable: nfs_client_export
+        type: string
+        required: true
+      path:
+        ansible_variable: nfs_client_path
+        type: string
+        required: true
+      options:
+        ansible_variable: nfs_client_options
+        type: list
+        items: string
+        required: false
+
 deployment_profile_reconciliation:
   dnsmasq:
     action:
@@ -388,3 +454,24 @@ deployment_profile_reconciliation:
     checks:
       - kind: http
         paths: ["/v1/models", "/api/tags"]
+
+  nfs_server:
+    action:
+      kind: playbook
+      playbook_by_os:
+        linux: playbooks/services/setup_nfs_server.yml
+    checks:
+      - kind: nfs_export
+        path_from_config: path
+
+  nfs_client:
+    action:
+      kind: playbook
+      playbook_by_os:
+        linux: playbooks/services/setup_nfs_client.yml
+        macos: playbooks/services/setup_nfs_client_macos.yml
+    dependencies:
+      - nfs_server
+    checks:
+      - kind: nfs_mount
+        path_from_config: path

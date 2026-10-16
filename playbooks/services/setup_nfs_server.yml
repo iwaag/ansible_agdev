@@ -1,0 +1,8 @@
+---
+- name: Export nctl-managed NFS shares from a Debian-family Linux host
+  hosts: "nfs_servers:&linux"
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: nfs_server

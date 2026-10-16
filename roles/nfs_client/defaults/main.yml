@@ -1,0 +1,25 @@
+---
+# One row per active nfs_client placement on this host (nctl render
+# production). Keys are the profile's ansible variables.
+nfs_client_mounts: []
+# Mount options before a placement's own `options`. Linux mounts through a
+# systemd automount (mounted on first access, also after a reboot or a server
+# outage); macOS through the automounter's direct map. `resvport` lets the
+# macOS client use a privileged source port, which the Linux server requires
+# by default.
+nfs_client_linux_base_options:
+  - rw
+  - hard
+  - nofail
+  - _netdev
+  - x-systemd.automount
+  - x-systemd.mount-timeout=30
+nfs_client_macos_base_options:
+  - rw
+  - resvport
+  - hard
+  - vers=3
+nfs_client_macos_map: /etc/auto_nintent
+# The user whose access is verified after mounting (the login user that
+# agents and services run as).
+nfs_client_verify_user: "{{ ansible_user | default(default_user) }}"

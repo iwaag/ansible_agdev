@@ -1,0 +1,78 @@
+---
+- name: Install the NFS client
+  ansible.builtin.apt:
+    name: nfs-common
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure each mount point exists
+  ansible.builtin.file:
+    path: "{{ item.nfs_client_path }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+  failed_when: false  # an already-mounted point is fine; the verification below decides
+
+- name: Declare each mount in fstab (lines marked for this role only)
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^\S+\s+{{ item.nfs_client_path | regex_escape }}\s'
+    line: "{{ item.nfs_client_server }}:{{ item.nfs_client_export }} {{ item.nfs_client_path }} nfs {{ (nfs_client_linux_base_options + (item.nfs_client_options | default([]))) | join(',') }} 0 0 # nintent:{{ item.instance_name }}"
+    backup: true
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+  register: nfs_client_fstab
+
+- name: Read fstab for marked lines of placements no longer active
+  ansible.builtin.slurp:
+    src: /etc/fstab
+  register: nfs_client_fstab_now
+
+- name: Remove marked fstab lines of inactive placements (unmarked lines are left alone)
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '# nintent:{{ item | regex_escape }}$'
+    state: absent
+    backup: true
+  loop: >-
+    {{ (nfs_client_fstab_now.content | b64decode).splitlines()
+       | select('search', '# nintent:') | map('regex_replace', '^.*# nintent:(\S+)$', '\1') | list
+       | difference(nfs_client_mounts | map(attribute='instance_name') | list) }}
+  register: nfs_client_fstab_removed
+
+- name: Reload systemd's view of fstab
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: nfs_client_fstab.changed or nfs_client_fstab_removed.changed
+
+- name: Name each mount's automount unit
+  ansible.builtin.command:
+    argv: [systemd-escape, --path, --suffix=automount, "{{ item.nfs_client_path }}"]
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+  register: nfs_client_units
+  changed_when: false
+
+- name: Drop a mount whose declaration changed, so the new options apply on next access
+  ansible.builtin.command:
+    argv: [umount, "{{ item.item.nfs_client_path }}"]
+  loop: "{{ nfs_client_fstab.results }}"
+  loop_control:
+    label: "{{ item.item.instance_name }}"
+  when: item.changed
+  register: nfs_client_umount
+  changed_when: nfs_client_umount.rc == 0
+  failed_when: false
+
+- name: Run each automount unit
+  ansible.builtin.systemd:
+    name: "{{ item.stdout }}"
+    state: started
+  loop: "{{ nfs_client_units.results }}"
+  loop_control:
+    label: "{{ item.stdout }}"

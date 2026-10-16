@@ -226,6 +226,46 @@ Send a Wake-on-LAN magic packet from the control node to Linux targets:
 ansible-playbook playbooks/power/wake_linux_hosts.yml --limit <host_or_group>
 ```
 
+### Shared NFS areas (`nfs_server`, `nfs_client`)
+
+project_migration p6. A shared area is one export on a Debian-family Linux
+host (`nfs_server`) and one mount per client (`nfs_client`, Linux or macOS).
+Install it like any service: declare the placements in Nautobot, then
+`nctl reconcile <host>` — the server's host first (a profile dependency only
+orders actions on the same host). Projects never see these paths: they name
+a logical share that each host resolves in its own ignored configuration.
+
+| profile | placement config | what the playbook does |
+|---|---|---|
+| `nfs_server` | `share`, `path` (backing directory), `clients` (export client specs, e.g. a LAN CIDR), `anon_uid`/`anon_gid` (the share owner), optional `mode` (default `2775`), `options` (extra export options) | installs `nfs-kernel-server`; creates `path` owned by `anon_uid:anon_gid`; writes `/etc/exports.d/nintent-<instance>.exports` with `rw,sync,no_subtree_check,all_squash,anonuid,anongid` + `options`; removes only `nintent-*` files of inactive placements; re-exports and verifies the path is exported by a running server. Refuses an unprivileged container (the kernel server cannot run there) |
+| `nfs_client` | `share`, `server` (host name), `export` (the server's `path`), `path` (mount point), optional `options` | Linux: installs `nfs-common`, one fstab line marked `# nintent:<instance>` (`rw,hard,nofail,_netdev,x-systemd.automount,x-systemd.mount-timeout=30` + `options`), starts its automount unit. macOS: the direct map `/etc/auto_nintent` (`rw,resvport,hard,vers=3` + `options`) referenced from `/etc/auto_master`. Lines and maps it did not write are left alone. Both: verifies the login user can list the mount |
+
+`all_squash` makes every client user the share owner, so a macOS user
+(uid 501) and a Linux user (uid 1000) read and write the same files. Choose
+`clients` as narrowly as the hosts that mount it.
+
+Observation: the checks `nfs_export` and `nfs_mount` (nodeutils, as the
+login user) report configured / running / exported, and configured /
+mounted / listable; anything short of all of them is `service_missing` in
+drift. They do not prove writes, large-file integrity or that two hosts see
+the same files — verify those with the playbook below when installing.
+
+`playbooks/services/verify_nfs_mount.yml` checks a mount as the host's login
+user and changes nothing outside one `probe-<name>` folder inside it:
+
+```bash
+ansible-playbook playbooks/services/verify_nfs_mount.yml --limit <client> \
+  -e nfs_verify_path=<mount point> -e nfs_verify_probe=probe-<name> \
+  -e nfs_verify_action=probe|write|hash|remount|cleanup [-e nfs_verify_size_mib=512]
+```
+
+`probe` writes, renames and reads back `<host>.done`; `write` writes
+`<host>.bin` of random bytes; `hash` reports name, size and sha256 of every
+probe file (run it on the other client and compare); `remount` unmounts as
+root and lists again, so the automount must bring the share back; `cleanup`
+removes the probe folder. A cagent change run names it in its plan
+(`playbooks` with `vars`).
+
 ## Notes
 
 - `suspend_hosts.yml` expects the Linux sudoers rule from `configure_suspend_sudo.yml` to already be installed.

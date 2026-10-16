@@ -1,0 +1,3 @@
+# Managed by nctl (deployment profile nfs_server, placement {{ item.instance_name }}). Edits are replaced.
+{{ item.nfs_server_path }} {% for client in item.nfs_server_clients %}{{ client }}({{ (nfs_server_base_options + ['anonuid=' ~ item.nfs_server_anon_uid, 'anongid=' ~ item.nfs_server_anon_gid] + (item.nfs_server_options | default([]))) | join(',') }}){{ ' ' if not loop.last else '' }}{% endfor %}
+

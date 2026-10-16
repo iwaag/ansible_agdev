@@ -1,0 +1,36 @@
+---
+- name: Validate the NFS mount contract
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['system'] in ['Linux', 'Darwin']
+      - ansible_facts['system'] == 'Darwin' or ansible_facts['os_family'] == 'Debian'
+      - nfs_client_mounts | map(attribute='instance_name') | unique | list | length == nfs_client_mounts | length
+      - nfs_client_mounts | map(attribute='nfs_client_path') | unique | list | length == nfs_client_mounts | length
+      - item.instance_name is match('^[a-z0-9]+(?:[-_][a-z0-9]+)*$')
+      - item.nfs_client_path is match('^/[^\s]+$')
+      - item.nfs_client_export is match('^/[^\s]+$')
+      - item.nfs_client_server is match('^[A-Za-z0-9.-]+$')
+    fail_msg: "Invalid nfs_client placement {{ item.instance_name | default('unknown') }}"
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name | default('unknown') }}"
+
+- name: Mount on Linux
+  ansible.builtin.include_tasks: linux.yml
+  when: ansible_facts['system'] == 'Linux'
+
+- name: Mount on macOS
+  ansible.builtin.include_tasks: macos.yml
+  when: ansible_facts['system'] == 'Darwin'
+
+- name: Verify each mount is usable by the login user (triggers the automount)
+  ansible.builtin.command:
+    argv: [ls, -1A, "{{ item.nfs_client_path }}"]
+  become: true
+  become_user: "{{ nfs_client_verify_user }}"
+  async: 60
+  poll: 2
+  changed_when: false
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
