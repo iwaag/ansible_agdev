@@ -38,12 +38,20 @@
   rescue:
     # Darwin only: no autofs trigger means the automounter's own state is
     # the evidence that matters (e.g. the master map has more than one
-    # entry for the same mountpoint, and only the first is honoured); show
-    # it instead of just the bare "No such file or directory".
+    # entry for the same mountpoint, and only the first is honoured, or the
+    # fstab entry this role declared is missing or malformed); show both
+    # files instead of just the bare "No such file or directory".
     - name: Read the master map for diagnosis
       ansible.builtin.slurp:
         src: "{{ nfs_client_macos_master }}"
       register: nfs_client_master_now
+      when: ansible_facts['system'] == 'Darwin'
+
+    - name: Read fstab for diagnosis
+      ansible.builtin.slurp:
+        src: "{{ nfs_client_macos_fstab }}"
+      register: nfs_client_fstab_now_diag
+      failed_when: false
       when: ansible_facts['system'] == 'Darwin'
 
     - name: Fail with the actual automounter state
@@ -53,6 +61,8 @@
           {{ nfs_client_mounts | map(attribute='nfs_client_path') | list }}.
           Current {{ nfs_client_macos_master }}:
           {{ (nfs_client_master_now.content | b64decode).splitlines() }}
+          Current {{ nfs_client_macos_fstab }}:
+          {{ (nfs_client_fstab_now_diag.content | default('') | b64decode).splitlines() }}
       when: ansible_facts['system'] == 'Darwin'
 
     - name: Re-raise the original failure

@@ -8,39 +8,57 @@
   loop_control:
     label: "{{ item.instance_name }}"
 
-- name: Write the direct map this role owns
-  ansible.builtin.template:
-    src: auto_nintent.j2
-    dest: "{{ nfs_client_macos_map }}"
-    owner: root
-    group: wheel
-    mode: "0644"
-  register: nfs_client_map
+- name: Declare each mount in fstab, for the stock "/- -static" map to pick up (lines marked for this role only)
+  ansible.builtin.lineinfile:
+    path: "{{ nfs_client_macos_fstab }}"
+    regexp: '^\S+\s+{{ item.nfs_client_path | regex_escape }}\s'
+    line: "{{ item.nfs_client_server }}:{{ item.nfs_client_export }} {{ item.nfs_client_path }} nfs {{ (nfs_client_macos_base_options + (item.nfs_client_options | default([]))) | join(',') }} 0 0 # nintent:{{ item.instance_name }}"
+    create: true
+    backup: true
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+  register: nfs_client_fstab
   notify: Reload the macOS automounter
 
-- name: Take over the direct-map mountpoint (macOS allows only one "/-" entry)
+- name: Read fstab for marked lines of placements no longer active
+  ansible.builtin.slurp:
+    src: "{{ nfs_client_macos_fstab }}"
+  register: nfs_client_fstab_now
+
+- name: Remove marked fstab lines of inactive placements (unmarked lines are left alone)
+  ansible.builtin.lineinfile:
+    path: "{{ nfs_client_macos_fstab }}"
+    regexp: '# nintent:{{ item | regex_escape }}$'
+    state: absent
+    backup: true
+  loop: >-
+    {{ (nfs_client_fstab_now.content | b64decode).splitlines()
+       | select('search', '# nintent:') | map('regex_replace', '^.*# nintent:(\S+)$', '\1') | list
+       | difference(nfs_client_mounts | map(attribute='instance_name') | list) }}
+  register: nfs_client_fstab_removed
+  notify: Reload the macOS automounter
+
+- name: Tidy up a pre-fix version's own "/-" master-map line, if still present
   ansible.builtin.lineinfile:
     path: "{{ nfs_client_macos_master }}"
-    regexp: '^/-\s+(?!{{ nfs_client_macos_map | basename }}\b)\S+'
+    regexp: '^/-\s+{{ nfs_client_macos_map_legacy | basename }}(\s|$)'
     state: absent
     backup: true
   notify: Reload the macOS automounter
 
-- name: Reference the map from auto_master (this role's own line only)
-  ansible.builtin.lineinfile:
-    path: "{{ nfs_client_macos_master }}"
-    regexp: '^/-\s+{{ nfs_client_macos_map | basename }}(\s|$)'
-    line: "/-\t\t\t{{ nfs_client_macos_map | basename }}\t-nosuid"
-    backup: true
-  notify: Reload the macOS automounter
+- name: Tidy up a pre-fix version's own direct-map file, if still present
+  ansible.builtin.file:
+    path: "{{ nfs_client_macos_map_legacy }}"
+    state: absent
 
-- name: Drop mounts whose map entry changed, so the new options apply on next access
+- name: Drop mounts whose fstab entry changed, so the new options apply on next access
   ansible.builtin.command:
-    argv: [umount, "{{ item.nfs_client_path }}"]
-  loop: "{{ nfs_client_mounts }}"
+    argv: [umount, "{{ item.item.nfs_client_path }}"]
+  loop: "{{ nfs_client_fstab.results }}"
   loop_control:
-    label: "{{ item.instance_name }}"
-  when: nfs_client_map.changed
+    label: "{{ item.item.instance_name }}"
+  when: item.changed
   register: nfs_client_umount
   changed_when: nfs_client_umount.rc == 0
   failed_when: false

@@ -1,4 +1,0 @@
-# Managed by nctl (deployment profile nfs_client). Edits are replaced.
-{% for item in nfs_client_mounts %}
-{{ item.nfs_client_path }}	-fstype=nfs,{{ (nfs_client_macos_base_options + (item.nfs_client_options | default([]))) | join(',') }}	{{ item.nfs_client_server }}:{{ item.nfs_client_export }}
-{% endfor %}

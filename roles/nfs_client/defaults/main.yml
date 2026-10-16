@@ -19,12 +19,19 @@ nfs_client_macos_base_options:
   - resvport
   - hard
   - vers=3
-nfs_client_macos_map: /etc/auto_nintent
-# The master map this role's direct-map entry is referenced from. macOS
-# allows only one master-map entry per mountpoint (auto_master(5)); since
-# this is a direct map, that mountpoint is the literal "/-", so this role
-# must be the sole "/-" entry, not merely add its own alongside any other.
-# Overridable so the takeover logic can be exercised against a scratch file.
+# macOS allows only one master-map entry per mountpoint (auto_master(5)), and
+# the stock default already claims the direct-map mountpoint "/-" for the
+# built-in "-static" map, which synthesizes direct-map entries from fstab(5)
+# (entries without the "net" option) instead of taking it over, this role
+# declares its mounts in fstab and lets "-static" pick them up — so the
+# stock "/-" line, and any other entries already in fstab, are left alone.
+# Overridable so this is exercised against a scratch file.
+nfs_client_macos_fstab: /etc/fstab
+# Where a pre-fix version of this role (develop/run-002 and earlier) wrote
+# its own direct map and "/-" master-map line; only used to tidy those away
+# on a host that still carries them. Overridable so that cleanup is
+# exercised against scratch files.
+nfs_client_macos_map_legacy: /etc/auto_nintent
 nfs_client_macos_master: /etc/auto_master
 # The user whose access is verified after mounting (the login user that
 # agents and services run as).
