@@ -10,6 +10,17 @@
       - (nfs_server_uid_map.content | b64decode).split()[1] == '0'
     fail_msg: "This host maps root to an unprivileged uid: the kernel NFS server cannot run here (use a VM or a privileged container)"
 
+- name: Ensure each backing directory exists with the share owner
+  ansible.builtin.file:
+    path: "{{ item.nfs_server_path }}"
+    state: directory
+    owner: "{{ item.nfs_server_anon_uid | int }}"
+    group: "{{ item.nfs_server_anon_gid | int }}"
+    mode: "{{ item.nfs_server_mode | default('2775') }}"
+  loop: "{{ nfs_server_exports }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+
 - name: Install the kernel NFS server
   ansible.builtin.apt:
     name: nfs-kernel-server

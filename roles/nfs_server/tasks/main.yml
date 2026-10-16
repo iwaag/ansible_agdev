@@ -17,17 +17,6 @@
   loop_control:
     label: "{{ item.instance_name | default('unknown') }}"
 
-- name: Ensure each backing directory exists with the share owner
-  ansible.builtin.file:
-    path: "{{ item.nfs_server_path }}"
-    state: directory
-    owner: "{{ item.nfs_server_anon_uid | int }}"
-    group: "{{ item.nfs_server_anon_gid | int }}"
-    mode: "{{ item.nfs_server_mode | default('2775') }}"
-  loop: "{{ nfs_server_exports }}"
-  loop_control:
-    label: "{{ item.instance_name }}"
-
 - name: Export on Linux
   ansible.builtin.include_tasks: linux.yml
   when: ansible_facts['system'] == 'Linux'

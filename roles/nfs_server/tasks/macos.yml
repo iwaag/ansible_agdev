@@ -10,6 +10,17 @@
       - nfs_server_macos_whoami.stdout | trim == '0'
     fail_msg: "This host did not escalate to root: the macOS NFS server cannot be configured without privilege (check Ansible become / sudoers)"
 
+- name: Ensure each backing directory exists with the share owner
+  ansible.builtin.file:
+    path: "{{ item.nfs_server_path }}"
+    state: directory
+    owner: "{{ item.nfs_server_anon_uid | int }}"
+    group: "{{ item.nfs_server_anon_gid | int }}"
+    mode: "{{ item.nfs_server_mode | default('2775') }}"
+  loop: "{{ nfs_server_exports }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+
 - name: Reject a client entry this macOS export cannot express
   ansible.builtin.assert:
     that:
@@ -22,44 +33,57 @@
   loop_control:
     label: "{{ item.0.instance_name }}: {{ item.1 }}"
 
-- name: Write a managed export block for each placement in /etc/exports (other lines are left alone)
-  ansible.builtin.blockinfile:
-    path: /etc/exports
-    create: true
-    owner: root
-    group: wheel
-    mode: "0644"
-    marker: "# {mark} nintent-{{ item.instance_name }} (nfs_server)"
-    block: >-
-      {{ item.nfs_server_path }}
-      -mapall={{ item.nfs_server_anon_uid | int }}:{{ item.nfs_server_anon_gid | int }}
-      {{ (item.nfs_server_options | default([])) | join(' ') }}
-      {{ item.nfs_server_clients | map('regex_replace', '/32$', '') | join(' ') }}
-  loop: "{{ nfs_server_exports }}"
-  loop_control:
-    label: "{{ item.instance_name }}"
-  register: nfs_server_macos_blocks
+- name: Write and remove /etc/exports blocks, each candidate validated before it is put in place
+  block:
+    - name: Write a managed export block for each placement in /etc/exports (other lines are left alone)
+      ansible.builtin.blockinfile:
+        path: /etc/exports
+        create: true
+        owner: root
+        group: wheel
+        mode: "0644"
+        marker: "# {mark} nintent-{{ item.instance_name }} (nfs_server)"
+        block: >-
+          {{ item.nfs_server_path }}
+          -mapall={{ item.nfs_server_anon_uid | int }}:{{ item.nfs_server_anon_gid | int }}
+          {{ (item.nfs_server_options | default([])) | join(' ') }}
+          {{ item.nfs_server_clients | map('regex_replace', '/32$', '') | join(' ') }}
+        validate: nfsd -F %s checkexports
+      loop: "{{ nfs_server_exports }}"
+      loop_control:
+        label: "{{ item.instance_name }}"
+      register: nfs_server_macos_blocks
 
-- name: Read /etc/exports for blocks of placements no longer active
-  ansible.builtin.slurp:
-    src: /etc/exports
-  register: nfs_server_macos_exports_now
+    - name: Read /etc/exports for blocks of placements no longer active
+      ansible.builtin.slurp:
+        src: /etc/exports
+      register: nfs_server_macos_exports_now
 
-- name: Remove export blocks of placements that are no longer active (other blocks are left alone)
-  ansible.builtin.blockinfile:
-    path: /etc/exports
-    marker: "# {mark} nintent-{{ item }} (nfs_server)"
-    state: absent
-  loop: >-
-    {{ (nfs_server_macos_exports_now.content | b64decode).splitlines()
-       | select('search', '^# BEGIN nintent-.+ \(nfs_server\)$')
-       | map('regex_replace', '^# BEGIN nintent-(.+) \(nfs_server\)$', '\1') | list
-       | difference(nfs_server_exports | map(attribute='instance_name') | list) }}
-  register: nfs_server_macos_blocks_removed
-
-- name: Validate /etc/exports before activating it
-  ansible.builtin.command: nfsd checkexports
-  changed_when: false
+    - name: Remove export blocks of placements that are no longer active (other blocks are left alone)
+      ansible.builtin.blockinfile:
+        path: /etc/exports
+        marker: "# {mark} nintent-{{ item }} (nfs_server)"
+        state: absent
+        validate: nfsd -F %s checkexports
+      loop: >-
+        {{ (nfs_server_macos_exports_now.content | b64decode).splitlines()
+           | select('search', '^# BEGIN nintent-.+ \(nfs_server\)$')
+           | map('regex_replace', '^# BEGIN nintent-(.+) \(nfs_server\)$', '\1') | list
+           | difference(nfs_server_exports | map(attribute='instance_name') | list) }}
+      register: nfs_server_macos_blocks_removed
+  rescue:
+    - name: Explain why the candidate /etc/exports failed validation
+      ansible.builtin.fail:
+        msg: >-
+          {% set errors = (ansible_failed_result.results | default([ansible_failed_result])
+             | selectattr('failed', 'defined') | selectattr('failed') | map(attribute='msg') | list) %}
+          {%- if errors | select('search', 'sandbox_check failed') | list | length > 0 -%}
+          nfsd could not read an export path while validating the candidate /etc/exports: macOS denied it Full
+          Disk Access. Grant it in System Settings > Privacy & Security > Full Disk Access (add /sbin/nfsd),
+          then run "sudo nfsd restart" and reconcile again. ({{ errors | join('; ') }})
+          {%- else -%}
+          {{ errors | join('; ') }}
+          {%- endif %}
 
 - name: Read nfsd's enabled/running state
   ansible.builtin.command: nfsd status
@@ -99,7 +123,9 @@
       - >-
         item.nfs_server_path in (nfs_server_macos_showmount.stdout_lines[1:]
         | map('trim') | map('regex_replace', '\s.*$', '') | list)
-    fail_msg: "{{ item.nfs_server_path }} is configured but not exported by a running server"
+    fail_msg: >-
+      {{ item.nfs_server_path }} is configured but not exported by a running server (if nfsd is running and
+      checkexports passed, check System Settings > Privacy & Security > Full Disk Access for nfsd next)
   loop: "{{ nfs_server_exports }}"
   loop_control:
     label: "{{ item.instance_name }}"
