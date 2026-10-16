@@ -8,11 +8,11 @@
   loop_control:
     label: "{{ item.instance_name }}"
 
-- name: Declare each mount in fstab, for the stock "/- -static" map to pick up (lines marked for this role only)
+- name: Declare each mount's entry in fstab, for the stock "/- -static" map to pick up (no trailing comment — macOS drops a commented fstab line)
   ansible.builtin.lineinfile:
     path: "{{ nfs_client_macos_fstab }}"
     regexp: '^\S+\s+{{ item.nfs_client_path | regex_escape }}\s'
-    line: "{{ item.nfs_client_server }}:{{ item.nfs_client_export }} {{ item.nfs_client_path }} nfs {{ (nfs_client_macos_base_options + (item.nfs_client_options | default([]))) | join(',') }} 0 0 # nintent:{{ item.instance_name }}"
+    line: "{{ item.nfs_client_server }}:{{ item.nfs_client_export }} {{ item.nfs_client_path }} nfs {{ (nfs_client_macos_base_options + (item.nfs_client_options | default([]))) | join(',') }} 0 0"
     create: true
     backup: true
   loop: "{{ nfs_client_mounts }}"
@@ -21,15 +21,27 @@
   register: nfs_client_fstab
   notify: Reload the macOS automounter
 
+- name: Declare each mount's marker on its own line directly above its entry (lines marked for this role only)
+  ansible.builtin.lineinfile:
+    path: "{{ nfs_client_macos_fstab }}"
+    regexp: '^# nintent:{{ item.instance_name | regex_escape }}$'
+    line: "# nintent:{{ item.instance_name }}"
+    insertbefore: '^{{ item.nfs_client_server | regex_escape }}:{{ item.nfs_client_export | regex_escape }}\s+{{ item.nfs_client_path | regex_escape }}\s'
+    backup: true
+  loop: "{{ nfs_client_mounts }}"
+  loop_control:
+    label: "{{ item.instance_name }}"
+  notify: Reload the macOS automounter
+
 - name: Read fstab for marked lines of placements no longer active
   ansible.builtin.slurp:
     src: "{{ nfs_client_macos_fstab }}"
   register: nfs_client_fstab_now
 
-- name: Remove marked fstab lines of inactive placements (unmarked lines are left alone)
+- name: Remove a legacy trailing-marker entry line of an inactive placement (pre-fix form; unmarked lines are left alone)
   ansible.builtin.lineinfile:
     path: "{{ nfs_client_macos_fstab }}"
-    regexp: '# nintent:{{ item | regex_escape }}$'
+    regexp: '^[^#].*# nintent:{{ item | regex_escape }}$'
     state: absent
     backup: true
   loop: >-
@@ -37,6 +49,19 @@
        | select('search', '# nintent:') | map('regex_replace', '^.*# nintent:(\S+)$', '\1') | list
        | difference(nfs_client_mounts | map(attribute='instance_name') | list) }}
   register: nfs_client_fstab_removed
+  notify: Reload the macOS automounter
+
+- name: Remove an inactive placement's marker line together with its entry line below it
+  ansible.builtin.replace:
+    path: "{{ nfs_client_macos_fstab }}"
+    regexp: '(?m)^# nintent:{{ item | regex_escape }}\n.*\n'
+    replace: ''
+    backup: true
+  loop: >-
+    {{ (nfs_client_fstab_now.content | b64decode).splitlines()
+       | select('search', '# nintent:') | map('regex_replace', '^.*# nintent:(\S+)$', '\1') | list
+       | difference(nfs_client_mounts | map(attribute='instance_name') | list) }}
+  register: nfs_client_marker_removed
   notify: Reload the macOS automounter
 
 - name: Tidy up a pre-fix version's own "/-" master-map line, if still present
