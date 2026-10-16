@@ -235,6 +235,18 @@ Install it like any service: declare the placements in Nautobot, then
 orders actions on the same host). Projects never see these paths: they name
 a logical share that each host resolves in its own ignored configuration.
 
+On a Mac serving the share, local processes use the backing directory
+directly. Do not add an `nfs_client` placement for that Mac's own export:
+macOS automountd substitutes a symlink for the self-mount, so it does not
+provide the NFS mount that the client observation expects. Set the backing
+directory owner to the local execution identity and map remote users to
+that owner. Other hosts use ordinary `nfs_client` placements.
+
+NFS checks currently prove existence and usability, not configuration
+content. After changing export options, client lists or ownership, run the
+appropriate setup playbook through the agreed change path; a converged
+`nctl reconcile` alone does not establish that those settings were applied.
+
 | profile | placement config | what the playbook does |
 |---|---|---|
 | `nfs_server` | `share`, `path` (backing directory), `clients` (export client specs — a bare host/IP, or an `ip/32` for a single host; macOS has no wider CIDR mask syntax), `anon_uid`/`anon_gid` (the share owner), optional `mode` (default `2775`), `options` (extra export options, Linux `exportfs` or macOS `exports(5)` flags matching the placement's own host) | Linux: installs `nfs-kernel-server`; creates `path` owned by `anon_uid:anon_gid`; writes `/etc/exports.d/nintent-<instance>.exports` with `rw,sync,no_subtree_check,all_squash,anonuid,anongid` + `options`; removes only `nintent-*` files of inactive placements; re-exports (`exportfs -ra`) and verifies the path is exported by a running server (kernel thread count + `/var/lib/nfs/etab`). Refuses an unprivileged container (the kernel server cannot run there). macOS: creates `path` the same way; writes one marked block per placement into `/etc/exports` (`<path> -mapall=anon_uid:anon_gid` + `options` + clients) — `blockinfile`, so blocks and lines it did not write are left alone; validates with `nfsd checkexports` before activating; `nfsd enable`/`start`/`update`; verifies with `pgrep -x nfsd` and `showmount -e localhost`. Both: a read-only privilege preflight runs before any mutating step |
