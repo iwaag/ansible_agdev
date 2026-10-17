@@ -29,7 +29,7 @@
         argv: [ls, -1A, "{{ item.nfs_client_path }}"]
       become: true
       become_user: "{{ nfs_client_verify_user }}"
-      async: 60
+      async: "{{ nfs_client_verify_timeout }}"
       poll: 2
       changed_when: false
       loop: "{{ nfs_client_mounts }}"
@@ -67,5 +67,9 @@
 
     - name: Re-raise the original failure
       ansible.builtin.fail:
-        msg: "{{ ansible_failed_result.msg | default('mount verification failed') }}"
+        msg: >-
+          NFS mount usability verification failed or timed out after {{ nfs_client_verify_timeout }} seconds:
+          {{ ansible_failed_result.msg | default('no further details') }}
+          Do not retry an automated unmount. If the path is a stale hard mount, arrange person-operated
+          recovery and rerun after the mount is healthy or detached.
       when: ansible_facts['system'] != 'Darwin'

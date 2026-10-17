@@ -321,6 +321,10 @@ deployment_profiles:
         type: list
         items: string
         required: false
+      mount_require_resv_port:
+        ansible_variable: nfs_server_mount_require_resv_port
+        type: boolean
+        required: false
 
   nfs_client:
     group: nfs_clients

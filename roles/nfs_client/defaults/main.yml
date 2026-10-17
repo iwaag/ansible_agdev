@@ -36,3 +36,6 @@ nfs_client_macos_master: /etc/auto_master
 # The user whose access is verified after mounting (the login user that
 # agents and services run as).
 nfs_client_verify_user: "{{ ansible_user | default(default_user) }}"
+# Bound the usability probe. A hard NFS operation can remain in kernel sleep
+# even after Ansible's async worker kills its process.
+nfs_client_verify_timeout: 15

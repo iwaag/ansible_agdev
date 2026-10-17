@@ -17,3 +17,8 @@ nfs_server_base_options:
 # per placement inside /etc/exports (there is no exports.d equivalent).
 nfs_server_exports_dir: /etc/exports.d
 nfs_server_file_prefix: nintent-
+# macOS mountd should accept NFS MOUNT requests from clients using noresvport.
+# This controls the MOUNT protocol port check; it is not an NFS data-socket fix.
+nfs_server_mount_require_resv_port: false
+nfs_server_macos_config_owner: root
+nfs_server_macos_config_group: wheel
