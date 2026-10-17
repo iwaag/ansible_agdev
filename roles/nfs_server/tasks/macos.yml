@@ -10,6 +10,23 @@
       - nfs_server_macos_whoami.stdout | trim == '0'
     fail_msg: "This host did not escalate to root: the macOS NFS server cannot be configured without privilege (check Ansible become / sudoers)"
 
+- name: Declare the macOS reserved-port policy while preserving other nfs.conf settings
+  ansible.builtin.lineinfile:
+    path: /etc/nfs.conf
+    regexp: '^nfs\.server\.mount\.require_resv_port\s*='
+    line: "nfs.server.mount.require_resv_port = {{ 1 if nfs_server_mount_require_resv_port | bool else 0 }}"
+    create: true
+    owner: "{{ nfs_server_macos_config_owner }}"
+    group: "{{ nfs_server_macos_config_group }}"
+    mode: "0644"
+    backup: true
+  register: nfs_server_macos_resv_port
+
+- name: Restart nfsd when its MOUNT reserved-port policy changes
+  ansible.builtin.command: nfsd restart
+  when: nfs_server_macos_resv_port.changed
+  changed_when: true
+
 - name: Ensure each backing directory exists with the share owner
   ansible.builtin.file:
     path: "{{ item.nfs_server_path }}"
