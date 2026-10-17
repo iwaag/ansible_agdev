@@ -244,7 +244,7 @@ that owner. Other hosts use ordinary `nfs_client` placements.
 
 NFS checks currently prove existence and usability, not configuration
 content. After changing export options, client lists or ownership, run the
-appropriate setup playbook through the agreed change path; a converged
+appropriate setup playbook; a converged
 `nctl reconcile` alone does not establish that those settings were applied.
 
 | profile | placement config | what the playbook does |
