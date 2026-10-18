@@ -1,0 +1,178 @@
+---
+- name: Validate the worker deployment inputs
+  ansible.builtin.assert:
+    that:
+      - wfe_worker_id is match('^[a-z][a-z0-9-]{0,31}$')
+      - wfe_worker_coordinator is match('^https?://')
+      - wfe_worker_wfe_version is match('^[0-9a-f]{7,40}$')
+      - wfe_worker_executor_version is match('^[0-9a-f]{7,40}$')
+      - wfe_worker_token_source | length > 0
+      - wfe_worker_gitea_url is match('^https?://')
+      - wfe_worker_gitea_token_source | length > 0
+    fail_msg: >-
+      wfe_worker needs a worker id, the coordinator URL, pinned WFE and
+      executor commits, and controller-local worker and Gitea token files.
+
+- name: Read the Node.js version
+  ansible.builtin.command: node --version
+  register: wfe_worker_node
+  changed_when: false
+  check_mode: false
+
+- name: Require the Node.js WFE runs on
+  ansible.builtin.assert:
+    that: (wfe_worker_node.stdout | regex_search('[0-9]+') | int) >= wfe_worker_node_min_major
+    fail_msg: "WFE needs Node.js >= {{ wfe_worker_node_min_major }} (found {{ wfe_worker_node.stdout }})"
+
+- name: Ensure the worker area exists
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ wfe_worker_area }}", mode: "0755"}
+    - {path: "{{ wfe_worker_area }}/bin", mode: "0755"}
+    - {path: "{{ wfe_worker_area }}/src", mode: "0755"}
+    - {path: "{{ wfe_worker_area }}/copies", mode: "0755"}
+    - {path: "{{ wfe_worker_area }}/overlays", mode: "0755"}
+    - {path: "{{ wfe_worker_area }}/.local/exec/logs", mode: "0755"}
+    - {path: "{{ wfe_worker_area }}/.local/worker", mode: "0700"}
+    - {path: "{{ ansible_facts['env']['HOME'] }}/.local/bin", mode: "0755"}
+
+- name: Check out the pinned WFE (agdevworld)
+  ansible.builtin.git:
+    repo: "{{ wfe_worker_wfe_repo }}"
+    dest: "{{ wfe_worker_area }}/src/agdevworld"
+    version: "{{ wfe_worker_wfe_version }}"
+    update: true
+  register: wfe_worker_wfe_git
+  notify: Restart the WFE worker
+
+- name: Install WFE's runtime dependencies
+  ansible.builtin.command:
+    argv: [npm, ci, --omit=dev, --no-audit, --no-fund]
+    chdir: "{{ wfe_worker_area }}/src/agdevworld/workflow_editor"
+  when: wfe_worker_wfe_git.changed
+  notify: Restart the WFE worker
+
+- name: Check out the pinned executor (agautolab)
+  ansible.builtin.git:
+    repo: "{{ wfe_worker_executor_repo }}"
+    dest: "{{ wfe_worker_area }}/src/agautolab"
+    version: "{{ wfe_worker_executor_version }}"
+    update: true
+  register: wfe_worker_executor_git
+  notify: Restart the WFE worker
+
+- name: Synchronize the executor's locked dependencies
+  ansible.builtin.command:
+    argv: ["{{ wfe_worker_uv_command }}", sync, --frozen]
+    chdir: "{{ wfe_worker_area }}/src/agautolab"
+  register: wfe_worker_uv_sync
+  changed_when: >-
+    'Installed ' in wfe_worker_uv_sync.stderr or
+    'Updated ' in wfe_worker_uv_sync.stderr or
+    'Removed ' in wfe_worker_uv_sync.stderr
+  notify: Restart the WFE worker
+
+- name: Read the installed Claude Code version
+  ansible.builtin.command: "{{ wfe_worker_claude_code_bin }} --version"
+  register: wfe_worker_claude_version
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install the pinned Claude Code CLI (native build)
+  ansible.builtin.shell: >-
+    set -o pipefail &&
+    curl -fsSL https://claude.ai/install.sh | bash -s {{ wfe_worker_claude_code_version }}
+  args:
+    executable: /bin/bash
+  when:
+    - not ansible_check_mode
+    - wfe_worker_claude_version.rc != 0 or wfe_worker_claude_code_version not in wfe_worker_claude_version.stdout
+  changed_when: true
+
+- name: Install the pinned Godot
+  when: wfe_worker_godot_version | length > 0
+  block:
+    - name: Check the installed Godot
+      ansible.builtin.stat:
+        path: "{{ wfe_worker_godot_dir }}/godot-{{ wfe_worker_godot_version }}/Godot_v{{ wfe_worker_godot_version }}-stable_linux.x86_64"
+      register: wfe_worker_godot
+
+    - name: Ensure the Godot directory exists
+      ansible.builtin.file:
+        path: "{{ wfe_worker_godot_dir }}/godot-{{ wfe_worker_godot_version }}"
+        state: directory
+        mode: "0755"
+
+    - name: Download and unpack Godot {{ wfe_worker_godot_version }}
+      ansible.builtin.unarchive:
+        src: "https://github.com/godotengine/godot/releases/download/{{ wfe_worker_godot_version }}-stable/Godot_v{{ wfe_worker_godot_version }}-stable_linux.x86_64.zip"
+        dest: "{{ wfe_worker_godot_dir }}/godot-{{ wfe_worker_godot_version }}"
+        remote_src: true
+      when: not wfe_worker_godot.stat.exists
+
+    - name: Link godot onto the agents' PATH
+      ansible.builtin.file:
+        src: "{{ wfe_worker_godot_dir }}/godot-{{ wfe_worker_godot_version }}/Godot_v{{ wfe_worker_godot_version }}-stable_linux.x86_64"
+        dest: "{{ ansible_facts['env']['HOME'] }}/.local/bin/godot"
+        state: link
+        force: true
+
+- name: Provision the worker token
+  ansible.builtin.copy:
+    src: "{{ wfe_worker_token_source }}"
+    dest: "{{ wfe_worker_area }}/worker.token"
+    mode: "0600"
+  no_log: true
+  notify: Restart the WFE worker
+
+- name: Provision the Gitea token
+  ansible.builtin.copy:
+    src: "{{ wfe_worker_gitea_token_source }}"
+    dest: "{{ wfe_worker_area }}/gitea.token"
+    mode: "0600"
+  no_log: true
+
+- name: Write the worker's configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ wfe_worker_area }}/{{ item.dest }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {src: worker.json.j2, dest: worker.json, mode: "0644"}
+    - {src: gitea.json.j2, dest: gitea.json, mode: "0644"}
+    - {src: shares.json.j2, dest: shares.json, mode: "0644"}
+    - {src: wfexec.toml.j2, dest: wfexec.toml, mode: "0644"}
+    - {src: wfe.sh.j2, dest: bin/wfe, mode: "0755"}
+  notify: Restart the WFE worker
+
+- name: Write the executor's local overlay
+  ansible.builtin.template:
+    src: agents.local.toml.j2
+    dest: "{{ wfe_worker_area }}/src/agautolab/.local/agents.local.toml"
+    mode: "0600"
+
+- name: Ensure the systemd user unit directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+
+- name: Install the worker's systemd user unit
+  ansible.builtin.template:
+    src: wfe-worker.service.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/wfe-worker.service"
+    mode: "0644"
+  notify: Restart the WFE worker
+
+- name: Enable and start the worker
+  ansible.builtin.systemd_service:
+    name: wfe-worker.service
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: not ansible_check_mode

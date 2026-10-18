@@ -1,0 +1,1 @@
+{% set shares = {} %}{% for entry in wfe_worker_shares %}{% set kv = entry.split('=', 1) %}{% set _ = shares.update({kv[0]: {'root': kv[1]}}) %}{% endfor %}{{ {'shares': shares} | to_nice_json(indent=2) }}

@@ -1,0 +1,18 @@
+# The executor on execution node {{ wfe_worker_id }} (written by the wfe_worker role).
+# Requests and notification are the coordinator's: intake and notify stay off here.
+wfe = [{{ (wfe_worker_area ~ '/bin/wfe') | to_json }}]
+worker = {{ wfe_worker_id | to_json }}
+
+[env]
+{% if wfe_worker_display | length > 0 %}
+DISPLAY = {{ wfe_worker_display | to_json }}
+{% endif %}
+{% if wfe_worker_xauthority | length > 0 %}
+XAUTHORITY = {{ wfe_worker_xauthority | to_json }}
+{% endif %}
+
+[notify]
+enabled = false
+
+[intake]
+enabled = false

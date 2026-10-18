@@ -1,0 +1,12 @@
+{{ {
+  'coordinator': wfe_worker_coordinator,
+  'worker': wfe_worker_id,
+  'label': wfe_worker_label,
+  'tokenFile': 'worker.token',
+  'facts': ({
+    'os': ansible_facts['distribution'] ~ ' ' ~ ansible_facts['distribution_version'] ~ ' (' ~ ansible_facts['architecture'] ~ ')',
+  } | combine({'godot': (ansible_facts['env']['HOME'] ~ '/.local/bin/godot (' ~ wfe_worker_godot_version ~ ')')} if wfe_worker_godot_version | length > 0 else {})
+    | combine({'display': wfe_worker_display ~ ' — the desktop session of the person at this machine; windows you open are seen there'} if wfe_worker_display | length > 0 else {})
+    | combine({'shared areas': (wfe_worker_shares | map('regex_replace', '=.*$', '') | join(', ')) ~ ' (wfe share list)'} if wfe_worker_shares | length > 0 else {})
+    | combine(wfe_worker_facts))
+} | to_nice_json(indent=2) }}

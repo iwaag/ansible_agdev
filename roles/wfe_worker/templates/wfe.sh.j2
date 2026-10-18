@@ -1,0 +1,5 @@
+#!/bin/sh
+# wfe on this execution node ({{ wfe_worker_id }}): the coordinator's client
+# (agdevworld workflow_editor/cli/remote.ts, docs/workers.md). Written by the
+# wfe_worker role.
+WFE_WORKER_AREA={{ wfe_worker_area | quote }} exec node {{ (wfe_worker_area ~ '/src/agdevworld/workflow_editor/cli/wfe.ts') | quote }} "$@"

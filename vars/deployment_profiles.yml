@@ -230,6 +230,72 @@ deployment_profiles:
         type: string
         required: false
 
+  # project_migration p7: a remote WFE execution node (agdevworld
+  # workflow_editor/docs/workers.md). One placement per node of the
+  # `agautolab` service; the coordinator's workers.json names the same id.
+  # Token sources are controller-local files, never their contents.
+  wfe_worker:
+    group: wfe_workers
+    config_schema_version: "1"
+    variables:
+      worker_id:
+        ansible_variable: wfe_worker_id
+        type: string
+        required: true
+      label:
+        ansible_variable: wfe_worker_label
+        type: string
+        required: false
+      coordinator:
+        ansible_variable: wfe_worker_coordinator
+        type: string
+        required: true
+      wfe_version:
+        ansible_variable: wfe_worker_wfe_version
+        type: string
+        required: true
+      executor_version:
+        ansible_variable: wfe_worker_executor_version
+        type: string
+        required: true
+      token_source:
+        ansible_variable: wfe_worker_token_source
+        type: string
+        required: true
+      gitea_url:
+        ansible_variable: wfe_worker_gitea_url
+        type: string
+        required: true
+      gitea_token_source:
+        ansible_variable: wfe_worker_gitea_token_source
+        type: string
+        required: true
+      shares:
+        ansible_variable: wfe_worker_shares
+        type: list
+        items: string
+        required: false
+      display:
+        ansible_variable: wfe_worker_display
+        type: string
+        required: false
+      xauthority:
+        ansible_variable: wfe_worker_xauthority
+        type: string
+        required: false
+      godot_version:
+        ansible_variable: wfe_worker_godot_version
+        type: string
+        required: false
+      claude_code_version:
+        ansible_variable: wfe_worker_claude_code_version
+        type: string
+        required: false
+      agents_local_toml:
+        ansible_variable: wfe_worker_agents_local_toml
+        type: string
+        required: false
+
   # project_migration p6: one shared area served by a Debian-family Linux
   # host and mounted by Linux and macOS clients. Physical paths live in
   # placement config, never in a project: projects name a logical share.
@@ -395,6 +461,15 @@ deployment_profile_reconciliation:
     checks:
       - kind: http
         paths: ["/v1/models", "/api/tags"]
+
+  wfe_worker:
+    action:
+      kind: playbook
+      playbook_by_os:
+        linux: playbooks/services/setup_wfe_worker.yml
+    checks:
+      - kind: file_exists
+        path: "~/wfe-worker/worker.json"
 
   nfs_server:
     action:

@@ -1,0 +1,8 @@
+schema = "ag.agent-config.v1"
+
+[local.harness.claude_code]
+command = {{ wfe_worker_claude_code_bin | to_json }}
+{% if wfe_worker_agents_local_toml | trim | length > 0 %}
+
+{{ wfe_worker_agents_local_toml | trim }}
+{% endif %}

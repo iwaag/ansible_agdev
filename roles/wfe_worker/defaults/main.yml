@@ -1,0 +1,40 @@
+---
+# A remote WFE execution node (project_migration p7; agdevworld
+# workflow_editor/docs/workers.md): the retained executor (agautolab.wfexec)
+# with WFE's worker client, launching agents in run copies on this host's
+# own disk, for the coordinator named below. Every value that differs per
+# node comes from the placement config (deployment_profiles.yml `wfe_worker`).
+wfe_worker_id: ""
+wfe_worker_label: "{{ ansible_facts['hostname'] }}"
+wfe_worker_coordinator: ""
+wfe_worker_area: "{{ ansible_facts['env']['HOME'] }}/wfe-worker"
+# Pinned source revisions: the coordinator's WFE release and executor.
+wfe_worker_wfe_repo: https://github.com/iwaag/agdevworld.git
+wfe_worker_wfe_version: ""
+wfe_worker_executor_repo: https://github.com/iwaag/agautolab.git
+wfe_worker_executor_version: ""
+# Controller-local files: the worker's token (the coordinator's workers.json
+# names the same file) and the Gitea token its Git operations use.
+wfe_worker_token_source: ""
+wfe_worker_gitea_url: ""
+wfe_worker_gitea_owner: developer
+wfe_worker_gitea_token_source: ""
+# shared:// areas on this host: "<share id>=<mounted folder>".
+wfe_worker_shares: []
+# The interactive desktop agents may draw on (empty: none).
+wfe_worker_display: ""
+wfe_worker_xauthority: ""
+# Tools the agents use, pinned.
+wfe_worker_node_min_major: 24
+wfe_worker_claude_code_version: "2.1.284"
+wfe_worker_claude_code_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
+wfe_worker_godot_version: ""
+wfe_worker_godot_dir: "{{ ansible_facts['env']['HOME'] }}/.local/opt"
+# Extra lines of the executor's agents.local.toml (profiles, harness commands).
+wfe_worker_agents_local_toml: ""
+# Facts the brief of every attempt on this node names (key -> text). The
+# role adds the OS, the Godot binary and the display.
+wfe_worker_facts: {}
+wfe_worker_uv_command: uv
+wfe_worker_service_path: >-
+  {{ ansible_facts['env']['HOME'] }}/.local/bin:{{ wfe_worker_area }}/bin:/usr/local/bin:/usr/bin:/bin:/snap/bin

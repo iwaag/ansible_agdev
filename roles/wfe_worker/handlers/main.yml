@@ -1,0 +1,11 @@
+---
+# A restart stops only the executor's own process (KillMode=process in the
+# unit): agents it launched keep running and the restarted executor adopts
+# them (wfe exec adopt).
+- name: Restart the WFE worker
+  ansible.builtin.systemd_service:
+    name: wfe-worker.service
+    scope: user
+    daemon_reload: true
+    state: restarted
+  when: not ansible_check_mode

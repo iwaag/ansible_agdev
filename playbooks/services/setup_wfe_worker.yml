@@ -1,0 +1,10 @@
+---
+# A remote WFE execution node (project_migration p7): the deployment profile
+# `wfe_worker`. Linux with a systemd user session (lingering) only.
+- name: Install and update WFE execution nodes
+  hosts: wfe_workers
+  gather_facts: true
+  become: false
+
+  roles:
+    - role: wfe_worker

@@ -1,0 +1,21 @@
+[Unit]
+Description=WFE execution node {{ wfe_worker_id }} (agautolab.wfexec)
+After=network-online.target
+
+[Service]
+Environment=PATH={{ wfe_worker_service_path }}
+{% if wfe_worker_display | length > 0 %}
+Environment=DISPLAY={{ wfe_worker_display }}
+{% endif %}
+{% if wfe_worker_xauthority | length > 0 %}
+Environment=XAUTHORITY={{ wfe_worker_xauthority }}
+{% endif %}
+WorkingDirectory={{ wfe_worker_area }}/src/agautolab
+ExecStart={{ wfe_worker_area }}/src/agautolab/.venv/bin/python -m agautolab.wfexec --settings {{ wfe_worker_area }}/wfexec.toml
+# Agents run in process groups of their own and outlive an executor restart.
+KillMode=process
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
