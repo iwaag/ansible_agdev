@@ -197,59 +197,6 @@ deployment_profiles:
         type: string
         required: false
 
-  autolab_node:
-    group: autolab_nodes
-    config_schema_version: "1"
-    variables:
-      repo_url:
-        ansible_variable: autolab_node_repo_url
-        type: string
-        required: true
-      repo_version:
-        ansible_variable: autolab_node_repo_version
-        type: string
-        required: false
-      repo_dest:
-        ansible_variable: autolab_node_repo_dest
-        type: string
-        required: true
-      instance_name:
-        ansible_variable: autolab_node_instance_name
-        type: string
-        required: false
-      gateway_port:
-        ansible_variable: autolab_node_gateway_port
-        type: integer
-        required: true
-      provider_ollama_base_url:
-        ansible_variable: autolab_node_provider_ollama_base_url
-        type: string
-        required: true
-      front_profile:
-        ansible_variable: autolab_node_front_profile
-        type: string
-        required: false
-      director_profile:
-        ansible_variable: autolab_node_director_profile
-        type: string
-        required: false
-      mediator_profile:
-        ansible_variable: autolab_node_mediator_profile
-        type: string
-        required: false
-      coding_profile:
-        ansible_variable: autolab_node_coding_profile
-        type: string
-        required: false
-      summarizer_profile:
-        ansible_variable: autolab_node_summarizer_profile
-        type: string
-        required: false
-      zulip_listener:
-        ansible_variable: autolab_node_zulip_listener
-        type: boolean
-        required: false
-
   agag_agent:
     group: agag_agents
     config_schema_version: "1"
@@ -432,16 +379,6 @@ deployment_profile_reconciliation:
       - kind: http
         paths: ["/"]
     run_state_from_config: run_state
-
-  autolab_node:
-    action:
-      kind: playbook
-      playbook: playbooks/agent/setup_autolab_node.yml
-    checks:
-      - kind: file_exists
-        path_from_config: repo_dest
-      - kind: http
-        paths: ["/healthz"]
 
   agag_agent:
     action:

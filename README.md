@@ -1,8 +1,8 @@
 # Ansible Project
 
 Operational usage lives here. Initial SSH, inventory, and Vault setup is documented in `README_ADMIN.md`.
-The legacy power webhook, autolab gateway and cagent node-client deployment
-roles retired in project_migration p5. Managed cagent workflows now provide
+The legacy power webhook and cagent node-client deployment roles retired in
+project_migration p5; the autolab gateway and listener in retire/old_autolab. Managed cagent workflows now provide
 the regular cluster-change entrance.
 
 The repository [test strategy command matrix](../README_DEV.md#test-strategy-command-matrix) is the
@@ -11,52 +11,18 @@ fixture cleanup ownership.
 
 ## Playbooks
 
-### Standard agent runtimes and autolab nodes
+### Agent runtimes and other playbooks
 
-`playbooks/agent/setup_autolab_node.yml` installs the pinned Claude Code CLI
-in the target user's home, updates the agautolab checkout, generates its
-locked runtime environment and `.local/agents.local.toml`, and starts the
-user-scoped gateway. The `local` profile needs nothing installed: agcode
-ships inside `pyagag` and runs as `python -m agag.agcode` from the same
-interpreter the checkout already uses. Run it from the production inventory
-after rendering current Nautobot placement intent:
+The `autolab_node` role, its playbook and the static `inventories/agautolab.yml`
+are gone (`retire/old_autolab`): they deployed the old autolab gateway and
+listener. autolab is now only the WFE workflow executor on agstudio, a
+`manual_toolchain` placement observed by its `agautolab.wfexec` process.
+`playbooks/agent/retire_agag_agent.yml` is the node half of retiring an agag
+agent instance.
 
-```bash
-uv run --project ../nctl nctl render production --out inventories/generated
-ansible-playbook -i inventories/generated/production.yml \
-  playbooks/agent/setup_autolab_node.yml --limit agautolab1
-```
-
-The `autolab_node` deployment profile in `vars/deployment_profiles.yml` maps
-placement config to the provider endpoint and optional role/profile
-overrides. Do not hand-edit the generated node overlay. The endpoint is the
-bare Ollama base URL with **no `/v1` suffix** — agcode posts to
-`{base_url}/v1/messages` and would double it. Claude Code 2.1.226 is pinned
-by its role; selecting an unavailable or unauthenticated harness fails rather
-than falling back.
-
-Anthropic authentication is optional and deployment-local. Set
-`autolab_node_anthropic_api_key_source` to a controller-local secret file via
-vault/local extra vars when deploying. Ansible copies it mode 0600 under the
-ignored project `.local/secrets/` directory, while the overlay contains only
-an `anthropic_api_key_file` path reference. Never put the value in placement
-config, inventory, defaults, or an agents file.
-
-Plane is gone (`refactor` p3). `AUTOLAB_NODE_PLANE_CREDENTIALS_SOURCE`,
-`AGAG_AGENT_PLANE_CREDENTIALS_SOURCE` and the `.local/plane.env` the roles
-used to write are removed, so reinstalling an agent can no longer put a Plane
-credential on a node. An agent's work record is its Zulip conversation.
-
-Zulip participation credentials follow the same controller-local pattern.
-Point `AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE` at the ignored env file for the
-target node. The role copies it to `.local/zulip.env` with mode 0600; the
-credential is not placement intent and must not be put in generated inventory:
-
-```bash
-AUTOLAB_NODE_ZULIP_CREDENTIALS_SOURCE=/path/to/ignored/autolab-node.env \
-  ansible-playbook -i inventories/generated/production.yml \
-  playbooks/agent/setup_autolab_node.yml --limit agautolab1
-```
+Zulip and Anthropic credentials stay controller-local and are copied by the
+`agag_agent` role into the checkout's ignored `.local/`; they are never
+placement intent or generated inventory.
 
 `playbooks/proxmox/create_lxc.yml` is nctl's bounded compute-create adapter. It is not a
 standalone lifecycle tool: nctl supplies the preflight-pinned VMID, template, storage, bridge,
