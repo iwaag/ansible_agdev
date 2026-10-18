@@ -149,6 +149,12 @@
     - {src: wfe.sh.j2, dest: bin/wfe, mode: "0755"}
   notify: Restart the WFE worker
 
+- name: Ensure the executor's local directory exists
+  ansible.builtin.file:
+    path: "{{ wfe_worker_area }}/src/agautolab/.local"
+    state: directory
+    mode: "0755"
+
 - name: Write the executor's local overlay
   ansible.builtin.template:
     src: agents.local.toml.j2

@@ -467,9 +467,12 @@ deployment_profile_reconciliation:
       kind: playbook
       playbook_by_os:
         linux: playbooks/services/setup_wfe_worker.yml
+    # The unit is the role's last artifact: a run that stopped before it is
+    # not taken as installed. Liveness is the worker's heartbeat at the
+    # coordinator (GET /api/workers), not a file.
     checks:
       - kind: file_exists
-        path: "~/wfe-worker/worker.json"
+        path: "~/.config/systemd/user/wfe-worker.service"
 
   nfs_server:
     action:
