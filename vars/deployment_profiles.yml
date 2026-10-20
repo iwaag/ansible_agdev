@@ -157,6 +157,14 @@ deployment_profiles:
     config_schema_version: "1"
     variables: {}
 
+  # aghangout (workflow_editor p15): a managed project's static application,
+  # installed by its own deploy and served by agdevworld-web on the agdev
+  # origin at /hangout/. Observed only: presence is that path answering.
+  aghangout_web:
+    group: aghangout_web
+    config_schema_version: "1"
+    variables: {}
+
   swarmui:
     group: swarmui_server
     config_schema_version: "1"
@@ -418,6 +426,12 @@ deployment_profile_reconciliation:
         path_from_config: script_path
       - kind: cron_registered
         path_from_config: script_path
+
+  aghangout_web:
+    observe_only: true
+    checks:
+      - kind: http
+        paths: ["/hangout/"]
 
   swarmui:
     observe_only: true
